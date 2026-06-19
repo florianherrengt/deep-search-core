@@ -1,0 +1,54 @@
+{
+  "name": "deep-search-core",
+  "version": "0.1.0",
+  "description": "Shared deep research orchestration, search, and extraction core.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./research-orchestrator": {
+      "types": "./dist/research-orchestrator/index.d.ts",
+      "import": "./dist/research-orchestrator/index.js"
+    },
+    "./search-extract": {
+      "types": "./dist/search-extract/index.d.ts",
+      "import": "./dist/search-extract/index.js"
+    },
+    "./search-extract/core": {
+      "types": "./dist/search-extract/core-api.d.ts",
+      "import": "./dist/search-extract/core-api.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/fix-extensions.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "ipaddr.js": "^2.4.0",
+    "p-queue": "^9.3.0",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "ai": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.0",
+    "ai": "^6.0.185",
+    "typescript": "~5.6.2",
+    "vitest": "^4.1.7"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

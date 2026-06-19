@@ -1,0 +1,18 @@
+import { z } from "zod";
+export const SEARCH_PROVIDER_NAMES = [
+    "brave",
+    "exa",
+    "serper",
+    "tavily",
+    "searxng",
+];
+export const searchResultSchema = z.object({
+    title: z.string(),
+    url: z.string(),
+    description: z.string(),
+    snippet: z.string().optional(),
+});
+export const searchQueryInputSchema = z.object({
+    query: z.string().min(1).describe("Search query"),
+});
+//# sourceMappingURL=types.js.map

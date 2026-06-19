@@ -1,0 +1,280 @@
+import { load } from "cheerio";
+import { PageExtractor } from "./base.js";
+function isShopifyUrl(url) {
+    const host = url.hostname;
+    return host === "myshopify.com" || host.endsWith(".myshopify.com");
+}
+function isProductPageUrl(url) {
+    const path = url.pathname;
+    return /\/products\/[a-z0-9][a-z0-9-]+[a-z0-9]$/i.test(path);
+}
+function toApiUrl(url, ext) {
+    const u = new URL(url);
+    u.pathname = u.pathname.endsWith(".json") || u.pathname.endsWith(".js")
+        ? u.pathname.replace(/\.(json|js)$/, ext)
+        : `${u.pathname}${ext}`;
+    u.search = "";
+    u.hash = "";
+    return u.toString();
+}
+const CURRENCY_SYMBOLS = {
+    USD: "$",
+    GBP: "£",
+    EUR: "€",
+    JPY: "¥",
+    CAD: "C$",
+    AUD: "A$",
+    CHF: "CHF",
+    SEK: "kr",
+    NOK: "kr",
+    DKK: "kr",
+    NZD: "NZ$",
+    BRL: "R$",
+    INR: "₹",
+    KRW: "₩",
+    CNY: "¥",
+    PLN: "zł",
+    SGD: "S$",
+    HKD: "HK$",
+};
+function formatCurrency(code, amount) {
+    if (!code)
+        return amount;
+    const sym = CURRENCY_SYMBOLS[code];
+    return sym ? `${sym}${amount}` : `${amount} ${code}`;
+}
+function stripHtml(html) {
+    return html
+        .replace(/<[^>]*>/g, "")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&nbsp;/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+function formatCentsPrice(cents, currency) {
+    const amount = (cents / 100).toFixed(2);
+    return formatCurrency(currency, amount);
+}
+function extractCurrency(jsonData) {
+    if (!jsonData?.product)
+        return undefined;
+    const variants = jsonData.product
+        .variants;
+    return variants?.[0]?.price_currency;
+}
+function formatJsProduct(data, currency) {
+    if (!data?.id || !data?.title)
+        return null;
+    const lines = [];
+    const title = String(data.title);
+    const vendor = data.vendor ? String(data.vendor) : null;
+    const productType = data.type ? String(data.type) : null;
+    const description = data.description ? stripHtml(String(data.description)) : null;
+    const rawOptions = data.options ?? [];
+    const options = Array.isArray(rawOptions)
+        ? rawOptions.filter((o) => o != null &&
+            typeof o === "object" &&
+            typeof o.name === "string" &&
+            Array.isArray(o.values) &&
+            o.values.every((v) => typeof v === "string"))
+        : [];
+    const rawTags = data.tags;
+    const tags = Array.isArray(rawTags)
+        ? rawTags.filter((t) => typeof t === "string")
+        : typeof rawTags === "string"
+            ? rawTags.split(", ")
+            : null;
+    const rawPriceMin = data.price_min;
+    const priceMin = typeof rawPriceMin === "number" && Number.isFinite(rawPriceMin) ? rawPriceMin : undefined;
+    const rawPriceMax = data.price_max;
+    const priceMax = typeof rawPriceMax === "number" && Number.isFinite(rawPriceMax) ? rawPriceMax : undefined;
+    const rawCompareAtPriceMax = data.compare_at_price_max;
+    const compareAtPriceMax = typeof rawCompareAtPriceMax === "number" && Number.isFinite(rawCompareAtPriceMax) ? rawCompareAtPriceMax : undefined;
+    lines.push(`# ${title}`);
+    lines.push("");
+    if (vendor)
+        lines.push(`**Vendor:** ${vendor}`);
+    if (productType)
+        lines.push(`**Type:** ${productType}`);
+    if (priceMin != null) {
+        const pMin = formatCentsPrice(priceMin, currency);
+        const pMax = priceMax != null ? formatCentsPrice(priceMax, currency) : null;
+        const priceStr = pMax && pMin !== pMax ? `${pMin} – ${pMax}` : pMin;
+        lines.push(`**Price:** ${priceStr}`);
+        if (compareAtPriceMax != null &&
+            compareAtPriceMax > (priceMax ?? priceMin)) {
+            lines.push(`**Was:** ${formatCentsPrice(compareAtPriceMax, currency)}`);
+        }
+    }
+    lines.push("");
+    if (description) {
+        lines.push(description);
+        lines.push("");
+    }
+    if (options.length > 0) {
+        lines.push("## Options");
+        lines.push("");
+        for (const option of options) {
+            lines.push(`- **${option.name}:** ${option.values.join(", ")}`);
+        }
+        lines.push("");
+    }
+    if (tags) {
+        const tagList = tags
+            .filter(Boolean)
+            .filter((t) => !t.startsWith("category-") && !t.startsWith("pri-"));
+        if (tagList.length > 0 && tagList.length <= 20) {
+            lines.push(`**Tags:** ${tagList.join(", ")}`);
+            lines.push("");
+        }
+    }
+    return lines.join("\n");
+}
+function formatJsonProduct(data) {
+    const product = data.product;
+    if (!product?.id || !product?.title)
+        return null;
+    const lines = [];
+    const title = String(product.title);
+    const vendor = product.vendor ? String(product.vendor) : null;
+    const productType = product.product_type
+        ? String(product.product_type)
+        : null;
+    const bodyHtml = product.body_html ? String(product.body_html) : null;
+    const description = bodyHtml ? stripHtml(bodyHtml) : null;
+    const rawOptions = product.options ?? [];
+    const options = Array.isArray(rawOptions)
+        ? rawOptions.filter((o) => o != null &&
+            typeof o === "object" &&
+            typeof o.name === "string" &&
+            Array.isArray(o.values) &&
+            o.values.every((v) => typeof v === "string"))
+        : [];
+    const rawTags = product.tags ? String(product.tags) : null;
+    const rawVariants = product.variants ?? [];
+    const variants = Array.isArray(rawVariants)
+        ? rawVariants.filter((v) => v != null &&
+            typeof v === "object" &&
+            typeof v.price === "string")
+        : [];
+    lines.push(`# ${title}`);
+    lines.push("");
+    if (vendor)
+        lines.push(`**Vendor:** ${vendor}`);
+    if (productType)
+        lines.push(`**Type:** ${productType}`);
+    if (variants.length > 0) {
+        const currency = variants[0].price_currency;
+        const prices = [
+            ...new Set(variants
+                .map((v) => Number(v.price))
+                .filter((n) => Number.isFinite(n))),
+        ];
+        if (prices.length === 0) {
+            lines.push("");
+        }
+        else {
+            const min = Math.min(...prices);
+            const max = Math.max(...prices);
+            const priceStr = min === max
+                ? formatCurrency(currency, min.toFixed(2))
+                : `${formatCurrency(currency, min.toFixed(2))} – ${formatCurrency(currency, max.toFixed(2))}`;
+            lines.push(`**Price:** ${priceStr}`);
+            const hasDiscount = variants.some((v) => v.compare_at_price &&
+                Number.isFinite(Number(v.compare_at_price)) &&
+                Number.isFinite(Number(v.price)) &&
+                Number(v.compare_at_price) > Number(v.price));
+            if (hasDiscount) {
+                const comparePrices = variants
+                    .map((v) => v.compare_at_price)
+                    .filter((p) => p != null)
+                    .map(Number)
+                    .filter(Number.isFinite);
+                if (comparePrices.length > 0) {
+                    const maxCompare = Math.max(...comparePrices);
+                    if (maxCompare > max) {
+                        lines.push(`**Was:** ${formatCurrency(currency, maxCompare.toFixed(2))}`);
+                    }
+                }
+            }
+        }
+    }
+    lines.push("");
+    if (description) {
+        lines.push(description);
+        lines.push("");
+    }
+    if (options.length > 0) {
+        lines.push("## Options");
+        lines.push("");
+        for (const option of options) {
+            lines.push(`- **${option.name}:** ${option.values.join(", ")}`);
+        }
+        lines.push("");
+    }
+    if (rawTags) {
+        const tagList = rawTags
+            .split(", ")
+            .filter(Boolean)
+            .filter((t) => !t.startsWith("category-") && !t.startsWith("pri-"));
+        if (tagList.length > 0 && tagList.length <= 20) {
+            lines.push(`**Tags:** ${tagList.join(", ")}`);
+            lines.push("");
+        }
+    }
+    return lines.join("\n");
+}
+function parseJsonFromHtml(html) {
+    const $ = load(html);
+    let jsonText = $("pre").first().text();
+    if (!jsonText)
+        jsonText = $("body").text();
+    if (!jsonText)
+        return null;
+    try {
+        const parsed = JSON.parse(jsonText);
+        if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+            return null;
+        }
+        return parsed;
+    }
+    catch {
+        return null;
+    }
+}
+export class ShopifyExtractor extends PageExtractor {
+    canHandle(url) {
+        return isShopifyUrl(url) && isProductPageUrl(url);
+    }
+    async extract(input) {
+        if (!input.loader.renderHtml)
+            return null;
+        const urlStr = input.url.href;
+        const [jsHtml, jsonHtml] = await Promise.all([
+            input.loader.renderHtml(toApiUrl(urlStr, ".js"), {}),
+            input.loader.renderHtml(toApiUrl(urlStr, ".json"), {}),
+        ]);
+        const jsData = jsHtml ? parseJsonFromHtml(jsHtml) : null;
+        const jsonData = jsonHtml ? parseJsonFromHtml(jsonHtml) : null;
+        if (jsData && jsData.id && jsData.title) {
+            const currency = extractCurrency(jsonData);
+            const content = formatJsProduct(jsData, currency);
+            if (content)
+                return { content };
+        }
+        if (jsonData && jsonData.product) {
+            const product = jsonData.product;
+            if (product?.id && product?.title) {
+                const content = formatJsonProduct(jsonData);
+                if (content)
+                    return { content };
+            }
+        }
+        return null;
+    }
+}
+//# sourceMappingURL=shopify.js.map
