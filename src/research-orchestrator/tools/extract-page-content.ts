@@ -9,6 +9,7 @@ import {
   RedditExtractor,
   AmazonExtractor,
   ShopifyExtractor,
+  TrustpilotExtractor,
   type SearchExtractEngine,
   type PageLoader,
 } from "../../search-extract/index.js";
@@ -40,7 +41,12 @@ function getEngine(
     _engine = createSearchExtractEngine({
       fetch: fetchFn,
       pageLoader,
-      extractors: [new RedditExtractor(), new AmazonExtractor(), new ShopifyExtractor()],
+      extractors: [
+        new RedditExtractor(),
+        new AmazonExtractor(),
+        new ShopifyExtractor(),
+        new TrustpilotExtractor(),
+      ],
     });
     _engineFetch = fetchFn;
     _enginePageLoader = pageLoader;

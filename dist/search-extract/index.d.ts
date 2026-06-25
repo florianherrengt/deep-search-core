@@ -1,5 +1,5 @@
-export { SEARCH_PROVIDER_NAMES, searchResultSchema, searchQueryInputSchema, } from "./core/types.js";
-export type { SearchProviderName, SearchResult, SearchOptions, SearchAllOptions, PageLoader, PageLoadOptions, PageRenderOptions, Summarizer, ExtractOptions, ExtractResult, } from "./core/types.js";
+export { SEARCH_PROVIDER_NAMES, AGGREGATABLE_PROVIDER_NAMES, searchResultSchema, searchQueryInputSchema, } from "./core/types.js";
+export type { SearchProviderName, AggregatableProviderName, SearchResult, MergedResult, SearchOptions, SearchAllOptions, PageLoader, PageLoadOptions, PageRenderOptions, Summarizer, ExtractOptions, ExtractResult, } from "./core/types.js";
 export { SearchProviderConfigError, SearchProviderError, SearchProviderResponseError, UrlValidationError, } from "./core/errors.js";
 export { rateLimit, setRateLimiter, resetRateLimiter, getRateLimiter, } from "./core/rate-limit.js";
 export type { RateLimiter } from "./core/rate-limit.js";
@@ -12,6 +12,7 @@ export { createExaSearch } from "./search/exa.js";
 export { createSerperSearch } from "./search/serper.js";
 export { createTavilySearch } from "./search/tavily.js";
 export { createSearXNGFetchSearch } from "./search/searxng.js";
+export { normalizeUrl, mergeResults, DEFAULT_AGGREGATE_NUM_RESULTS, } from "./search/aggregate.js";
 export type { BraveConfig, BraveSearchFn } from "./search/brave.js";
 export type { ExaConfig, ExaSearchFn } from "./search/exa.js";
 export type { SerperConfig, SerperSearchFn } from "./search/serper.js";
@@ -27,6 +28,8 @@ export type { RedditPost, RedditComment } from "./extract/extractors/reddit-json
 export { RedditExtractor, isRedditChallengeHtml, parseOldRedditHtml, } from "./extract/extractors/reddit.js";
 export { AmazonExtractor, isAmazonChallengePage, parseAmazonProductHtml, } from "./extract/extractors/amazon.js";
 export { ShopifyExtractor } from "./extract/extractors/shopify.js";
+export { GithubExtractor, isGithubRepoOverviewUrl, isGithubNotFoundHtml, parseGithubRepoHtml, } from "./extract/extractors/github.js";
+export type { ParsedGithubRepo } from "./extract/extractors/github.js";
 export { extractPage } from "./extract/extract-page.js";
 export type { ExtractPageDeps } from "./extract/extract-page.js";
 export { createAiSdkSummarizer, createAiSdkSearchTool, createAiSdkExtractPageContentTool, } from "./adapters/ai-sdk.js";

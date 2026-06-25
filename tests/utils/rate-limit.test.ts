@@ -35,8 +35,11 @@ describe("rateLimit", () => {
   it("rejects with already-aborted signal", async () => {
     const controller = new AbortController();
     controller.abort();
+    // A bare `toBeDefined` would accept any incidental error (e.g. a TypeError
+    // from a regression that broke the queue). Require the SDK AbortError name
+    // so the test fails if the abort signal is silently ignored.
     await expect(
       rateLimit(async () => "ok", controller.signal),
-    ).rejects.toBeDefined();
+    ).rejects.toThrow(/abort/i);
   });
 });

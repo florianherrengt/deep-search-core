@@ -1,5 +1,5 @@
 import {
-  SEARCH_PROVIDER_NAMES,
+  AGGREGATABLE_PROVIDER_NAMES,
   type SearchProviderName,
   type SearchResult,
   type SearchAllOptions,
@@ -18,6 +18,10 @@ import {
   createSearXNGFetchSearch,
   type SearXNGConfig,
 } from "../search/searxng.js";
+import {
+  DEFAULT_AGGREGATE_NUM_RESULTS,
+  mergeResults,
+} from "../search/aggregate.js";
 import type { PageExtractor } from "../extract/extractors/base.js";
 
 type SearchFn = (query: string, signal?: AbortSignal) => Promise<SearchResult[]>;
@@ -95,7 +99,73 @@ function getSearchFn(
       }
       return createSearXNGFetchSearch({ ...searxngConfig, fetch: searxngConfig.fetch ?? fetchImpl });
     }
+    case "aggregate": {
+      return createAggregateSearchFn(config);
+    }
   }
+}
+
+/**
+ * Build a SearchFn for the "aggregate" provider that fans out to every
+ * configured aggregatable provider in parallel, then merges the per-engine
+ * result lists via {@link mergeResults}.
+ *
+ * Unconfigured providers are silently skipped — this matches the philosophy
+ * of `searchAll` ("combine what's available") while still letting the caller
+ * invoke aggregation through the single-provider `search()` entry point.
+ */
+function createAggregateSearchFn(config: CreateEngineConfig): SearchFn {
+  const perEngineFns: SearchFn[] = [];
+  for (const name of AGGREGATABLE_PROVIDER_NAMES) {
+    try {
+      perEngineFns.push(getSearchFn(config, name));
+    } catch {
+      // Skip unconfigured providers.
+    }
+  }
+
+  return async (query: string, signal?: AbortSignal): Promise<SearchResult[]> => {
+    if (perEngineFns.length === 0) {
+      throw new SearchProviderConfigError(
+        "Aggregate",
+        "requires at least one underlying search provider to be configured",
+      );
+    }
+
+    const settled = await Promise.allSettled(
+      perEngineFns.map((fn) =>
+        rateLimit(() => fn(query, signal), signal),
+      ),
+    );
+
+    // If the caller aborted, propagate that directly rather than wrapping it
+    // in an AggregateSearchError — aborts are intentional cancellations, not
+    // provider failures, and downstream handlers key off the AbortError name.
+    if (signal?.aborted) {
+      throw new DOMException("The operation was aborted.", "AbortError");
+    }
+
+    const engineResults: SearchResult[][] = [];
+    const errors: Error[] = [];
+
+    for (const result of settled) {
+      if (result.status === "fulfilled") {
+        engineResults.push(result.value);
+      } else {
+        errors.push(result.reason as Error);
+      }
+    }
+
+    if (engineResults.length === 0 && errors.length > 0) {
+      throw new AggregateSearchError(
+        errors,
+        `Aggregate search failed: all underlying providers failed for query "${query}"`,
+      );
+    }
+
+    const merged = mergeResults(engineResults, DEFAULT_AGGREGATE_NUM_RESULTS);
+    return merged;
+  };
 }
 
 function getExtractDeps(config: CreateEngineConfig) {
@@ -124,8 +194,12 @@ export function createSearchExtractEngine(
       query: string,
       options?: SearchAllOptions,
     ): Promise<SearchResult[]> {
+      // The "aggregate" provider is itself a fan-out over the others, so
+      // exclude it from the default set to avoid double-counting. Callers
+      // can still request it explicitly via `options.providers`.
       const requestedProviders =
-        options?.providers ?? [...SEARCH_PROVIDER_NAMES];
+        options?.providers ??
+        ([...AGGREGATABLE_PROVIDER_NAMES] as SearchProviderName[]);
       const enabledProviders: Array<{
         name: SearchProviderName;
         fn: SearchFn;

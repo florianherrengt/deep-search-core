@@ -2,9 +2,9 @@ import { describe, it, expect } from "vitest";
 import { TOOL_NAMES, type ToolName } from "../src/research-orchestrator/tool-names";
 
 describe("TOOL_NAMES", () => {
-  it("has all 12 tool names", () => {
+  it("has all 13 tool names", () => {
     const keys = Object.keys(TOOL_NAMES);
-    expect(keys).toHaveLength(12);
+    expect(keys).toHaveLength(13);
   });
 
   it("has every key equal to its value", () => {
@@ -21,6 +21,7 @@ describe("TOOL_NAMES", () => {
     "serper_search",
     "tavily_search",
     "searxng_search",
+    "aggregate_search",
     "extract_page_content",
     "research_checkpoint",
     "sequential_thinking",
@@ -34,6 +35,6 @@ describe("TOOL_NAMES", () => {
 
   it("ToolName type accepts all tool names", () => {
     const names: ToolName[] = Object.values(TOOL_NAMES);
-    expect(names).toHaveLength(12);
+    expect(names).toHaveLength(13);
   });
 });

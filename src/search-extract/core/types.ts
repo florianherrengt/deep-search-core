@@ -6,9 +6,25 @@ export const SEARCH_PROVIDER_NAMES = [
   "serper",
   "tavily",
   "searxng",
+  "aggregate",
 ] as const;
 
 export type SearchProviderName = (typeof SEARCH_PROVIDER_NAMES)[number];
+
+/**
+ * Providers that can be queried individually and aggregated by the
+ * "aggregate" provider. Excludes "aggregate" itself to avoid recursion.
+ */
+export const AGGREGATABLE_PROVIDER_NAMES = [
+  "brave",
+  "exa",
+  "serper",
+  "tavily",
+  "searxng",
+] as const;
+
+export type AggregatableProviderName =
+  (typeof AGGREGATABLE_PROVIDER_NAMES)[number];
 
 export const searchResultSchema = z.object({
   title: z.string(),
@@ -18,6 +34,18 @@ export const searchResultSchema = z.object({
 });
 
 export type SearchResult = z.infer<typeof searchResultSchema>;
+
+/**
+ * A SearchResult augmented with cross-engine ranking signals produced by
+ * merging results from multiple providers.
+ *
+ * - `frequency`: how many distinct engines returned this URL.
+ * - `bestPosition`: the best (lowest) 1-based rank observed across engines.
+ */
+export interface MergedResult extends SearchResult {
+  frequency: number;
+  bestPosition: number;
+}
 
 export const searchQueryInputSchema = z.object({
   query: z.string().min(1).describe("Search query"),

@@ -1,11 +1,14 @@
 export {
   SEARCH_PROVIDER_NAMES,
+  AGGREGATABLE_PROVIDER_NAMES,
   searchResultSchema,
   searchQueryInputSchema,
 } from "./core/types.js";
 export type {
   SearchProviderName,
+  AggregatableProviderName,
   SearchResult,
+  MergedResult,
   SearchOptions,
   SearchAllOptions,
   PageLoader,
@@ -43,6 +46,12 @@ export { createSerperSearch } from "./search/serper.js";
 export { createTavilySearch } from "./search/tavily.js";
 export { createSearXNGFetchSearch } from "./search/searxng.js";
 
+export {
+  normalizeUrl,
+  mergeResults,
+  DEFAULT_AGGREGATE_NUM_RESULTS,
+} from "./search/aggregate.js";
+
 export type { BraveConfig, BraveSearchFn } from "./search/brave.js";
 export type { ExaConfig, ExaSearchFn } from "./search/exa.js";
 export type { SerperConfig, SerperSearchFn } from "./search/serper.js";
@@ -72,6 +81,28 @@ export {
 } from "./extract/extractors/amazon.js";
 
 export { ShopifyExtractor } from "./extract/extractors/shopify.js";
+
+export {
+  TrustpilotExtractor,
+  isTrustpilotUrl,
+  isTrustpilotReviewPageUrl,
+  isTrustpilotChallengeHtml,
+  parseTrustpilotCompanyHtml,
+} from "./extract/extractors/trustpilot.js";
+export type {
+  ParsedTrustpilotPage,
+  TrustpilotRatingDistributionEntry,
+  TrustpilotReply,
+  TrustpilotReview,
+} from "./extract/extractors/trustpilot.js";
+
+export {
+  GithubExtractor,
+  isGithubRepoOverviewUrl,
+  isGithubNotFoundHtml,
+  parseGithubRepoHtml,
+} from "./extract/extractors/github.js";
+export type { ParsedGithubRepo } from "./extract/extractors/github.js";
 
 export { extractPage } from "./extract/extract-page.js";
 export type { ExtractPageDeps } from "./extract/extract-page.js";

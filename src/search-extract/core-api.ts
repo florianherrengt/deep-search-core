@@ -74,6 +74,20 @@ export {
 
 export { ShopifyExtractor } from "./extract/extractors/shopify.js";
 
+export {
+  TrustpilotExtractor,
+  isTrustpilotUrl,
+  isTrustpilotReviewPageUrl,
+  isTrustpilotChallengeHtml,
+  parseTrustpilotCompanyHtml,
+} from "./extract/extractors/trustpilot.js";
+export type {
+  ParsedTrustpilotPage,
+  TrustpilotRatingDistributionEntry,
+  TrustpilotReply,
+  TrustpilotReview,
+} from "./extract/extractors/trustpilot.js";
+
 export { extractPage } from "./extract/extract-page.js";
 export type { ExtractPageDeps } from "./extract/extract-page.js";
 

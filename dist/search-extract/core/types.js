@@ -5,6 +5,18 @@ export const SEARCH_PROVIDER_NAMES = [
     "serper",
     "tavily",
     "searxng",
+    "aggregate",
+];
+/**
+ * Providers that can be queried individually and aggregated by the
+ * "aggregate" provider. Excludes "aggregate" itself to avoid recursion.
+ */
+export const AGGREGATABLE_PROVIDER_NAMES = [
+    "brave",
+    "exa",
+    "serper",
+    "tavily",
+    "searxng",
 ];
 export const searchResultSchema = z.object({
     title: z.string(),

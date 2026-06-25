@@ -55,7 +55,13 @@ describe("isRecord", () => {
     expect(isRecord(() => {})).toBe(false);
   });
 
-  it("returns false for class instances", () => {
-    expect(isRecord(new Date())).toBe(true); // Date is an object, not array
+  it("returns true for class instances (Object whose [[Class]] is not Array)", () => {
+    // Note: isRecord intentionally returns true for class instances (Date,
+    // Map, etc.). It only excludes arrays and null. The test name documents
+    // this contract so future refactors don't accidentally narrow it without
+    // auditing call sites.
+    expect(isRecord(new Date())).toBe(true);
+    expect(isRecord(new Map())).toBe(true);
+    expect(isRecord(new Set())).toBe(true);
   });
 });

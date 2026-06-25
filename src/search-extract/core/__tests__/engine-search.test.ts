@@ -7,6 +7,7 @@ import {
   SearchProviderConfigError,
   SearchProviderError,
   SearchProviderResponseError,
+  AggregateSearchError,
 } from "../errors.js";
 import { setRateLimiter, resetRateLimiter } from "../rate-limit.js";
 import PQueue from "p-queue";
@@ -306,5 +307,214 @@ describe("abort propagation", () => {
     setTimeout(() => controller.abort(), 10);
 
     await expect(searchPromise).rejects.toThrow("abort");
+  });
+});
+
+describe("engine aggregate provider", () => {
+  beforeEach(() => {
+    resetRateLimiter();
+    const fastQueue = new PQueue({ concurrency: 10 });
+    setRateLimiter({ schedule: (fn) => fastQueue.add(fn) });
+  });
+
+  // Build a mock fetch that routes by hostname and returns one in-common
+  // result ("https://shared.example") plus a per-engine unique result.
+  function makeRoutingFetch() {
+    return vi.fn().mockImplementation((url: string) => {
+      let body: unknown;
+      if (url.includes("brave.com")) {
+        body = {
+          web: {
+            results: [
+              { title: "Shared Long Title", url: "https://shared.example/x", description: "Brave desc" },
+              { title: "Brave Unique", url: "https://brave.unique.example", description: "Only Brave" },
+            ],
+          },
+        };
+      } else if (url.includes("exa.ai")) {
+        body = {
+          results: [
+            { title: "Sh", url: "https://shared.example/x", text: "Exa desc" },
+            { title: "Exa Unique", url: "https://exa.unique.example", text: "Only Exa" },
+          ],
+        };
+      } else if (url.includes("serper.dev")) {
+        body = {
+          organic: [{ title: "Serper Unique", link: "https://serper.unique.example", snippet: "Only Serper" }],
+        };
+      } else if (url.includes("tavily.com")) {
+        body = {
+          results: [{ title: "Tavily Unique", url: "https://tavily.unique.example", content: "Only Tavily" }],
+        };
+      } else {
+        body = {
+          results: [{ title: "SearXNG Unique", url: "https://searxng.unique.example", content: "Only SearXNG" }],
+        };
+      }
+      return Promise.resolve(makeResponse(200, body));
+    });
+  }
+
+  it("merges results from all configured providers, ranking shared URLs first", async () => {
+    const mockFetch = makeRoutingFetch();
+    const engine = createTestEngine(
+      mockFetch as unknown as typeof globalThis.fetch,
+    );
+
+    const results = await engine.search("aggregate", "test query");
+
+    // The shared URL appeared in 2 of 5 engines and should be ranked first.
+    expect(results[0]).toMatchObject({
+      url: "https://shared.example/x",
+      title: "Shared Long Title",
+    });
+    // 1 shared URL + 5 unique per-engine URLs = 6 total after dedup.
+    expect(results).toHaveLength(6);
+    const urls = results.map((r) => r.url);
+    expect(urls).toContain("https://brave.unique.example");
+    expect(urls).toContain("https://exa.unique.example");
+    expect(urls).toContain("https://serper.unique.example");
+    expect(urls).toContain("https://tavily.unique.example");
+    expect(urls).toContain("https://searxng.unique.example");
+  });
+
+  it("calls every configured provider in parallel", async () => {
+    const mockFetch = makeRoutingFetch();
+    const engine = createTestEngine(
+      mockFetch as unknown as typeof globalThis.fetch,
+    );
+
+    await engine.search("aggregate", "test query");
+
+    expect(mockFetch).toHaveBeenCalledTimes(5);
+  });
+
+  it("skips unconfigured providers when aggregating", async () => {
+    const engine = createSearchExtractEngine({
+      fetch: makeRoutingFetch() as unknown as typeof globalThis.fetch,
+      searchProviders: {
+        brave: { apiKey: "key-brave" },
+        exa: { apiKey: "key-exa" },
+      },
+    });
+
+    const results = await engine.search("aggregate", "test query");
+
+    // Only brave + exa contribute: shared URL + 2 unique URLs.
+    expect(results).toHaveLength(3);
+    const urls = results.map((r) => r.url);
+    expect(urls).toContain("https://shared.example/x");
+    expect(urls).toContain("https://brave.unique.example");
+    expect(urls).toContain("https://exa.unique.example");
+  });
+
+  it("throws SearchProviderConfigError when no providers are configured", async () => {
+    const engine = createSearchExtractEngine({
+      fetch: globalThis.fetch,
+    });
+
+    await expect(engine.search("aggregate", "q")).rejects.toThrow(
+      SearchProviderConfigError,
+    );
+  });
+
+  it("throws AggregateSearchError when all underlying providers fail", async () => {
+    const mockFetch = vi.fn().mockResolvedValue(
+      makeResponse(500, { error: "boom" }),
+    );
+    const engine = createTestEngine(
+      mockFetch as unknown as typeof globalThis.fetch,
+    );
+
+    await expect(engine.search("aggregate", "q")).rejects.toThrow(
+      AggregateSearchError,
+    );
+  });
+
+  it("returns partial merged results when some providers fail", async () => {
+    const mockFetch = vi.fn().mockImplementation((url: string) => {
+      // Brave succeeds; everything else 500s.
+      if (url.includes("brave.com")) {
+        return Promise.resolve(
+          makeResponse(200, {
+            web: {
+              results: [
+                { title: "OK", url: "https://ok.example", description: "d" },
+              ],
+            },
+          }),
+        );
+      }
+      return Promise.resolve(makeResponse(500, { error: "boom" }));
+    });
+
+    const engine = createTestEngine(
+      mockFetch as unknown as typeof globalThis.fetch,
+    );
+
+    const results = await engine.search("aggregate", "q");
+
+    expect(results).toHaveLength(1);
+    expect(results[0]!.url).toBe("https://ok.example");
+  });
+
+  it("propagates AbortSignal to underlying provider calls", async () => {
+    const controller = new AbortController();
+    const mockFetch = vi.fn().mockImplementation(
+      (_input: string, init?: RequestInit) =>
+        new Promise<MockResponse>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("aborted", "AbortError"));
+          });
+        }),
+    );
+
+    const engine = createTestEngine(
+      mockFetch as unknown as typeof globalThis.fetch,
+    );
+
+    const p = engine.search("aggregate", "q", { signal: controller.signal });
+    setTimeout(() => controller.abort(), 10);
+
+    await expect(p).rejects.toThrow("abort");
+  });
+});
+
+describe("engine searchAll excludes aggregate by default", () => {
+  beforeEach(() => {
+    resetRateLimiter();
+    const fastQueue = new PQueue({ concurrency: 10 });
+    setRateLimiter({ schedule: (fn) => fastQueue.add(fn) });
+  });
+
+  it("does not invoke aggregate when no providers are specified", async () => {
+    // If "aggregate" were in the default set, every call would fan out to all
+    // providers, multiplying fetch counts. We assert a single fan-out only.
+    const callCount = { count: 0 };
+    const mockFetch = vi.fn().mockImplementation((url: string) => {
+      callCount.count++;
+      let body: unknown;
+      if (url.includes("brave.com")) {
+        body = { web: { results: [{ title: "B", url: "https://b.example", description: "d" }] } };
+      } else if (url.includes("exa.ai")) {
+        body = { results: [{ title: "E", url: "https://e.example", text: "t" }] };
+      } else if (url.includes("serper.dev")) {
+        body = { organic: [{ title: "S", link: "https://s.example", snippet: "sn" }] };
+      } else if (url.includes("tavily.com")) {
+        body = { results: [{ title: "T", url: "https://t.example", content: "c" }] };
+      } else {
+        body = { results: [{ title: "X", url: "https://x.example", content: "c" }] };
+      }
+      return Promise.resolve(makeResponse(200, body));
+    });
+
+    const engine = createTestEngine(
+      mockFetch as unknown as typeof globalThis.fetch,
+    );
+    await engine.searchAll("test query");
+
+    // Exactly 5 calls (one per real provider), NOT 5 + 5 from an aggregate
+    // fan-out.
+    expect(callCount.count).toBe(5);
   });
 });
