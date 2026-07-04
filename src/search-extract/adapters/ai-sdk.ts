@@ -99,7 +99,10 @@ export function createAiSdkExtractPageContentTool(
       });
 
       if (!result.content && !result.html) {
-        return `No content could be extracted from ${url}. The page may be empty, require JavaScript rendering, or be blocked by a paywall or captcha.`;
+        return appendExtractionWarnings(
+          `No content could be extracted from ${url}. The page may be empty, require JavaScript rendering, or be blocked by a paywall or captcha.`,
+          result.warnings,
+        );
       }
 
       const shouldSummarize =
@@ -123,4 +126,10 @@ export function createAiSdkExtractPageContentTool(
       return result.content;
     },
   });
+}
+
+function appendExtractionWarnings(message: string, warnings?: string[]): string {
+  const usefulWarnings = (warnings ?? []).filter((warning) => warning.trim());
+  if (usefulWarnings.length === 0) return message;
+  return `${message}\n\nWarnings:\n${usefulWarnings.map((warning) => `- ${warning}`).join("\n")}`;
 }

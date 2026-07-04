@@ -2,7 +2,7 @@ import { tool, zodSchema, streamText } from "ai";
 import { z } from "zod";
 import { isAbortError } from "../utils/abort.js";
 import { validateUrl, UrlValidationError } from "../utils/url-validation.js";
-import { sanitizeHtml, extractVisibleTextFromHtml, createSearchExtractEngine, RedditExtractor, AmazonExtractor, ShopifyExtractor, } from "../../search-extract/index.js";
+import { sanitizeHtml, extractVisibleTextFromHtml, createSearchExtractEngine, RedditExtractor, AmazonExtractor, ShopifyExtractor, TrustpilotExtractor, GithubExtractor, YouTubeExtractor, } from "../../search-extract/index.js";
 let _engine = null;
 let _engineFetch = null;
 let _enginePageLoader;
@@ -13,7 +13,14 @@ function getEngine(fetchFn, pageLoader) {
         _engine = createSearchExtractEngine({
             fetch: fetchFn,
             pageLoader,
-            extractors: [new RedditExtractor(), new AmazonExtractor(), new ShopifyExtractor()],
+            extractors: [
+                new RedditExtractor(),
+                new AmazonExtractor(),
+                new ShopifyExtractor(),
+                new TrustpilotExtractor(),
+                new GithubExtractor(),
+                new YouTubeExtractor(),
+            ],
         });
         _engineFetch = fetchFn;
         _enginePageLoader = pageLoader;
@@ -45,9 +52,9 @@ export async function extractPageContent(options) {
         summarize: false,
         signal: abortSignal,
     });
-    const { content, html: rawHtml, usedCustomExtractor } = extractResult;
+    const { content, html: rawHtml, usedCustomExtractor, warnings } = extractResult;
     if (!rawHtml && !content) {
-        return `No content could be extracted from ${url}. The page may be empty, require JavaScript rendering, or be blocked by a paywall or captcha.`;
+        return appendExtractionWarnings(`No content could be extracted from ${url}. The page may be empty, require JavaScript rendering, or be blocked by a paywall or captcha.`, warnings);
     }
     const shouldSummarize = shouldSummarizeContent(doSummarize, query, usedCustomExtractor);
     if (!shouldSummarize)
@@ -62,6 +69,12 @@ export async function extractPageContent(options) {
             throw error;
         return content;
     }
+}
+function appendExtractionWarnings(message, warnings) {
+    const usefulWarnings = (warnings ?? []).filter((warning) => warning.trim());
+    if (usefulWarnings.length === 0)
+        return message;
+    return `${message}\n\nWarnings:\n${usefulWarnings.map((warning) => `- ${warning}`).join("\n")}`;
 }
 export const extractPageContentInputSchema = z.object({
     url: z.string().describe("URL to extract content from"),

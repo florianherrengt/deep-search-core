@@ -4,6 +4,7 @@ import { type ExaConfig } from "../search/exa.js";
 import { type SerperConfig } from "../search/serper.js";
 import { type TavilyConfig } from "../search/tavily.js";
 import { type SearXNGConfig } from "../search/searxng.js";
+import { type YouTubeConfig } from "../search/youtube.js";
 import type { PageExtractor } from "../extract/extractors/base.js";
 export interface CreateEngineConfig {
     fetch?: typeof globalThis.fetch;
@@ -13,6 +14,7 @@ export interface CreateEngineConfig {
         serper?: SerperConfig;
         tavily?: TavilyConfig;
         searxng?: SearXNGConfig;
+        youtube?: YouTubeConfig;
     };
     pageLoader?: PageLoader;
     summarizer?: Summarizer;

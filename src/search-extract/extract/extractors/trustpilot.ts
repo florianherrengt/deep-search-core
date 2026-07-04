@@ -66,7 +66,10 @@ export function isTrustpilotUrl(url: URL): boolean {
 export function isTrustpilotReviewPageUrl(url: URL): boolean {
   if (!isTrustpilotUrl(url)) return false;
   const segments = url.pathname.split("/").filter(Boolean);
-  return segments.length >= 2 && segments[0] === "review";
+  // Trustpilot exposes the company review page at both /review/<company>
+  // (canonical) and /reviews/<company>, and individual reviews at
+  // /reviews/<id>. Accept both the singular and plural first segments.
+  return segments.length >= 2 && (segments[0] === "review" || segments[0] === "reviews");
 }
 
 function normalizeText(text: string): string {
@@ -130,8 +133,15 @@ function extractCompanyName($: CheerioAPI, url: URL | null): string | null {
 }
 
 function extractProfileStatus($: CheerioAPI): string | null {
+  // `normalizeText` collapses the whole body to a single line, so the capture
+  // must be explicitly bounded: a greedy `[^.|\n]+` would run past the status
+  // into the adjacent trust score (e.g. swallow "...September 2025 4" up to the
+  // period in "4.3"). We only keep an optional "• <month name> <year>" suffix
+  // and stop before any trailing numeric content.
   const bodyText = normalizeText($("body").text());
-  const claimed = bodyText.match(/Claimed profile(?:\s*[\u2022-]\s*[^.|\n]+)?/i)?.[0];
+  const claimed = bodyText.match(
+    /Claimed profile(?:\s*[\u2022\u2013-]\s*[A-Za-z][A-Za-z\s]*?\d{4})?(?=\s+(?:[0-5]\.\d|\d+\s+reviews?|TrustScore|Based\s+on)|$)/i,
+  )?.[0];
   if (claimed) return normalizeText(claimed);
   if (/Unclaimed profile/i.test(bodyText)) return "Unclaimed profile";
   return null;
@@ -181,6 +191,10 @@ function extractRatingLabel($: CheerioAPI): string | null {
 }
 
 function extractReviewCount($: CheerioAPI, jsonLd: ParsedJsonLd): string | null {
+  // Trustpilot renders large counts in abbreviated form ("12K reviews",
+  // "3.4M reviews") in addition to full comma-separated form ("12,345").
+  // Match either so popular companies' review counts are not dropped.
+  const COUNT = String.raw`[\d,]+(?:\.\d+)?\s?[kKmM]?`;
   const selectors = [
     "[data-business-unit-review-count]",
     "[data-testid='review-count']",
@@ -189,21 +203,25 @@ function extractReviewCount($: CheerioAPI, jsonLd: ParsedJsonLd): string | null 
   ];
   for (const selector of selectors) {
     const text = normalizeText($(selector).first().text());
-    const match = text.match(/([\d,]+)\s+reviews?/i);
-    if (match) return `${match[1]} reviews`;
+    const match = text.match(new RegExp(`(${COUNT})\\s+reviews?`, "i"));
+    if (match) return `${normalizeText(match[1])} reviews`;
   }
 
-  const h1Match = normalizeText($("h1").first().text()).match(/Reviews?\s+([\d,]+)/i);
-  if (h1Match) return `${h1Match[1]} reviews`;
+  const h1Match = normalizeText($("h1").first().text()).match(
+    new RegExp(`Reviews?\\s+(${COUNT})`, "i"),
+  );
+  if (h1Match) return `${normalizeText(h1Match[1])} reviews`;
 
   if (jsonLd.reviewCount) return `${jsonLd.reviewCount} reviews`;
 
   const metaDescription = metaContent($, ["og:description", "description"]);
-  const metaMatch = metaDescription?.match(/what\s+([\d,]+)\s+people/i);
-  if (metaMatch) return `${metaMatch[1]} reviews`;
+  const metaMatch = metaDescription?.match(new RegExp(`what\\s+(${COUNT})\\s+people`, "i"));
+  if (metaMatch) return `${normalizeText(metaMatch[1])} reviews`;
 
-  const bodyMatch = normalizeText($("body").text()).match(/\b([\d,]+)\s+reviews?\b/i);
-  return bodyMatch ? `${bodyMatch[1]} reviews` : null;
+  const bodyMatch = normalizeText($("body").text()).match(
+    new RegExp(`\\b(${COUNT})\\s+reviews?\\b`, "i"),
+  );
+  return bodyMatch ? `${normalizeText(bodyMatch[1])} reviews` : null;
 }
 
 function extractCategories($: CheerioAPI): string[] {

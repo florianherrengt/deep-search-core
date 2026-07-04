@@ -5,6 +5,8 @@ import type { MergedResult, SearchResult } from "../core/types.js";
  * - lowercases the hostname
  * - drops the fragment
  * - removes tracking query parameters
+ * - removes userinfo (`user:pass@`), which is never meaningful for search
+ *   dedup and is a known phishing/obfuscation vector (`https://good@evil`)
  * - strips a single trailing slash from non-root paths
  *
  * Throws if `rawUrl` is not a parseable URL (callers should pre-validate).

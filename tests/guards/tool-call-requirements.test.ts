@@ -51,8 +51,14 @@ describe("TOOL_CALL_REQUIREMENTS", () => {
 
   it("extract_page_content requires any search tool", () => {
     const req = TOOL_CALL_REQUIREMENTS[TOOL_NAMES.extract_page_content];
-    expect(req.anyOfPreviousTools).toBeDefined();
-    expect(req.anyOfPreviousTools!.length).toBe(5);
+    expect(req.anyOfPreviousTools).toEqual([
+      TOOL_NAMES.brave_search,
+      TOOL_NAMES.exa_search,
+      TOOL_NAMES.serper_search,
+      TOOL_NAMES.tavily_search,
+      TOOL_NAMES.searxng_search,
+      TOOL_NAMES.youtube_search,
+    ]);
   });
 });
 

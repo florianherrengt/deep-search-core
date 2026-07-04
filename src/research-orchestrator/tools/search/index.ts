@@ -4,6 +4,7 @@ import { createExaSearchTool } from "./exa";
 import { createSerperSearchTool } from "./serper";
 import { createTavilySearchTool } from "./tavily";
 import { createSearXNGSearchTool } from "./searxng";
+import { createYouTubeSearchTool } from "./youtube";
 import { createAggregateSearchTool } from "./aggregate";
 import { isValidServiceUrl } from "../../utils/url-validation";
 import type { ToolSet } from "ai";
@@ -42,6 +43,9 @@ export function createSearchTools(
   }
   if (searchKeys?.searxngBaseUrl && isValidServiceUrl(searchKeys.searxngBaseUrl)) {
     tools.searxng_search = createSearXNGSearchTool(searchKeys.searxngBaseUrl, fetchFn);
+  }
+  if (searchKeys?.youtubeApiKey) {
+    tools.youtube_search = createYouTubeSearchTool(searchKeys.youtubeApiKey, fetchFn);
   }
   // The aggregate tool fans out to every configured provider above, so only
   // register it when at least one is available.

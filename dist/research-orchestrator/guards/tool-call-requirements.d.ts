@@ -18,7 +18,7 @@ export declare const TOOL_CALL_REQUIREMENTS: {
         readonly instruction: "Call ask_questions first to clarify the research scope, then retry create_research_plan.";
     };
     readonly extract_page_content: {
-        readonly anyOfPreviousTools: readonly ["brave_search", "exa_search", "serper_search", "tavily_search", "searxng_search"];
+        readonly anyOfPreviousTools: readonly ["brave_search", "exa_search", "serper_search", "tavily_search", "searxng_search", "youtube_search"];
         readonly instruction: "Run a web search first to find URLs to extract from, then retry extract_page_content.";
     };
 };

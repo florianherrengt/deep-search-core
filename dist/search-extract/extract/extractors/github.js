@@ -26,6 +26,10 @@ const RESERVED_FIRST_SEGMENTS = new Set([
     "events",
     "stars",
     "dashboard",
+    // A user profile lives at /users/<name>: it has exactly two path segments
+    // (like owner/repo), so without reserving it the extractor would claim it
+    // and, if the profile has a README, misparse the profile README as a repo.
+    "users",
 ]);
 export function isGithubRepoOverviewUrl(url) {
     const host = url.hostname;

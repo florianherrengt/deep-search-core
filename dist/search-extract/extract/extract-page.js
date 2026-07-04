@@ -15,6 +15,7 @@ export async function extractPage(url, options, deps) {
     const extractorInput = {
         url: parsedUrl,
         loader: deps.pageLoader ?? {},
+        fetch: deps.fetch ?? globalThis.fetch,
         signal,
     };
     for (const extractor of extractors) {

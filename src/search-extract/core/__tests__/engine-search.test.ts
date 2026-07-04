@@ -44,6 +44,7 @@ function createTestEngine(
       serper: { apiKey: "key-serper" },
       tavily: { apiKey: "key-tavily" },
       searxng: { baseUrl: "http://localhost:8080" },
+      youtube: { apiKey: "key-youtube" },
     },
   });
 }
@@ -126,6 +127,34 @@ describe("engine search dispatch", () => {
 
     expect(results).toEqual([
       { title: "Tavily Result", url: "https://tavily.example", description: "Tavily content" },
+    ]);
+  });
+
+  it("dispatches to youtube provider and returns video results", async () => {
+    const mockFetch = vi.fn().mockResolvedValue(
+      makeResponse(200, {
+        items: [
+          {
+            id: { videoId: "abc123DEF45" },
+            snippet: {
+              title: "YouTube Result",
+              description: "Video description",
+              channelTitle: "Channel",
+            },
+          },
+        ],
+      }),
+    );
+
+    const engine = createTestEngine(mockFetch);
+    const results = await engine.search("youtube", "test query");
+
+    expect(results).toEqual([
+      {
+        title: "YouTube Result",
+        url: "https://www.youtube.com/watch?v=abc123DEF45",
+        description: "Video ID: abc123DEF45\nChannel: Channel\nVideo description",
+      },
     ]);
   });
 
@@ -478,6 +507,85 @@ describe("engine aggregate provider", () => {
 
     await expect(p).rejects.toThrow("abort");
   });
+});
+
+describe("engine aggregate with default (concurrency-1) rate limiter", () => {
+  // IMPORTANT: this block deliberately does NOT replace the default rate
+  // limiter. The default limiter is a single-slot queue (concurrency 1,
+  // 1 request/second), which is the production configuration. A previous
+  // version wrapped the aggregate orchestration in the outer rate limiter
+  // *and* rate-limited each underlying provider call inside it, producing a
+  // re-entrant deadlock that hung forever. These tests guard against that
+  // regression by asserting completion rather than hanging.
+  //
+  // The deadlock reproduces with even a single configured provider (the outer
+  // call holds the only slot while the inner per-provider call waits for it),
+  // so we configure just one to keep the test fast while still catching the
+  // regression under the real serial limiter.
+  function singleProviderEngine(fetch: typeof globalThis.fetch) {
+    return createSearchExtractEngine({
+      fetch,
+      searchProviders: { brave: { apiKey: "k" } },
+    });
+  }
+
+  beforeEach(() => {
+    resetRateLimiter();
+  });
+
+  it("completes (does not deadlock) when aggregating under the default rate limiter", async () => {
+    const mockFetch = vi.fn().mockResolvedValue(
+      makeResponse(200, {
+        web: {
+          results: [
+            { title: "R", url: "https://b.example", description: "d" },
+          ],
+        },
+      }),
+    );
+
+    const engine = singleProviderEngine(
+      mockFetch as unknown as typeof globalThis.fetch,
+    );
+
+    // Race against a hard timeout. Under the deadlock the aggregate never
+    // resolves; with the fix it completes after the single serialized call.
+    const results = await Promise.race([
+      engine.search("aggregate", "q"),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("DEADLOCK: aggregate never resolved")),
+          5000,
+        ),
+      ),
+    ]);
+
+    expect(Array.isArray(results)).toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  }, 8000);
+
+  it("keeps the queue usable after an aggregate call", async () => {
+    // Under the deadlock, even a subsequent single-provider call would queue
+    // behind the stuck aggregate and never run. Verify the queue stays usable.
+    const mockFetch = vi.fn().mockResolvedValue(
+      makeResponse(200, {
+        web: {
+          results: [
+            { title: "R", url: "https://b.example", description: "d" },
+          ],
+        },
+      }),
+    );
+
+    const engine = singleProviderEngine(
+      mockFetch as unknown as typeof globalThis.fetch,
+    );
+
+    await engine.search("aggregate", "q");
+    await engine.search("brave", "q");
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  }, 8000);
 });
 
 describe("engine searchAll excludes aggregate by default", () => {

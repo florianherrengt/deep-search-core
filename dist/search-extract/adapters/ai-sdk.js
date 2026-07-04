@@ -76,7 +76,7 @@ export function createAiSdkExtractPageContentTool(engine, options) {
                 signal: ctx?.abortSignal,
             });
             if (!result.content && !result.html) {
-                return `No content could be extracted from ${url}. The page may be empty, require JavaScript rendering, or be blocked by a paywall or captcha.`;
+                return appendExtractionWarnings(`No content could be extracted from ${url}. The page may be empty, require JavaScript rendering, or be blocked by a paywall or captcha.`, result.warnings);
             }
             const shouldSummarize = !!query ||
                 doSummarize === true ||
@@ -97,5 +97,11 @@ export function createAiSdkExtractPageContentTool(engine, options) {
             return result.content;
         },
     });
+}
+function appendExtractionWarnings(message, warnings) {
+    const usefulWarnings = (warnings ?? []).filter((warning) => warning.trim());
+    if (usefulWarnings.length === 0)
+        return message;
+    return `${message}\n\nWarnings:\n${usefulWarnings.map((warning) => `- ${warning}`).join("\n")}`;
 }
 //# sourceMappingURL=ai-sdk.js.map

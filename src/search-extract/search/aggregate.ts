@@ -27,6 +27,8 @@ const TRACKING_PARAMS = new Set([
  * - lowercases the hostname
  * - drops the fragment
  * - removes tracking query parameters
+ * - removes userinfo (`user:pass@`), which is never meaningful for search
+ *   dedup and is a known phishing/obfuscation vector (`https://good@evil`)
  * - strips a single trailing slash from non-root paths
  *
  * Throws if `rawUrl` is not a parseable URL (callers should pre-validate).
@@ -35,6 +37,8 @@ export function normalizeUrl(rawUrl: string): string {
   const url = new URL(rawUrl);
 
   url.hostname = url.hostname.toLowerCase();
+  url.username = "";
+  url.password = "";
   url.hash = "";
 
   const toDelete: string[] = [];
@@ -150,5 +154,12 @@ export function mergeResults(
     return a.bestPosition - b.bestPosition;
   });
 
-  return merged.slice(0, Math.max(0, numResults));
+  // `slice(0, NaN)` returns `[]`, which would silently discard every result
+  // for a non-numeric cap. Treat a non-finite cap as "use the default" so a
+  // buggy upstream caller cannot erase the data, while still honouring an
+  // explicit zero/negative cap (yielding no results).
+  const limit = Number.isFinite(numResults)
+    ? Math.max(0, Math.floor(numResults))
+    : DEFAULT_AGGREGATE_NUM_RESULTS;
+  return merged.slice(0, limit);
 }

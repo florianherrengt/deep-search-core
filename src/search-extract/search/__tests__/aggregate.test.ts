@@ -221,6 +221,54 @@ describe("mergeResults", () => {
     expect(merged).toEqual([]);
   });
 
+  it("does not silently drop all results when numResults is NaN", () => {
+    // Regression: slice(0, NaN) returns [], so a NaN cap previously discarded
+    // every result with no error. A non-finite cap should fall back to the
+    // default rather than erase the data.
+    const merged = mergeResults(
+      [[r("A", "https://a.example")]],
+      Number.NaN,
+    );
+    expect(merged).toHaveLength(1);
+  });
+
+  it("truncates fractional numResults rather than dropping all", () => {
+    // slice(0, 2.5) keeps 2; just assert it does not drop everything.
+    const merged = mergeResults(
+      [
+        [
+          r("A", "https://a.example"),
+          r("B", "https://b.example"),
+          r("C", "https://c.example"),
+        ],
+      ],
+      2.5,
+    );
+    expect(merged).toHaveLength(2);
+  });
+
+  it("strips userinfo (user:pass@) from the normalized URL", () => {
+    expect(normalizeUrl("https://user:pass@Example.com/path/")).toBe(
+      "https://example.com/path",
+    );
+  });
+
+  it("strips userinfo so phishing-style URLs dedup against the bare host", () => {
+    // https://google.com@evil.com/ keeps host "evil.com" after URL parsing,
+    // so the userinfo here is purely obfuscation and must not survive.
+    expect(normalizeUrl("https://google.com@evil.com/x")).toBe(
+      "https://evil.com/x",
+    );
+  });
+
+  it("deduplicates URLs that differ only in userinfo", () => {
+    const merged = mergeResults([
+      [r("A", "https://user@site.example/x", "")],
+      [r("B", "https://site.example/x", "")],
+    ]);
+    expect(merged).toHaveLength(1);
+  });
+
   it("preserves the longest snippet when present", () => {
     const engineA: SearchResult[] = [
       { title: "T", url: "https://example.com/x", description: "d", snippet: "short" },

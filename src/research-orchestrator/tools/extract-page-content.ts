@@ -10,6 +10,8 @@ import {
   AmazonExtractor,
   ShopifyExtractor,
   TrustpilotExtractor,
+  GithubExtractor,
+  YouTubeExtractor,
   type SearchExtractEngine,
   type PageLoader,
 } from "../../search-extract/index.js";
@@ -46,6 +48,8 @@ function getEngine(
         new AmazonExtractor(),
         new ShopifyExtractor(),
         new TrustpilotExtractor(),
+        new GithubExtractor(),
+        new YouTubeExtractor(),
       ],
     });
     _engineFetch = fetchFn;
@@ -103,10 +107,13 @@ export async function extractPageContent(options: ExtractOptions): Promise<strin
     signal: abortSignal,
   });
 
-  const { content, html: rawHtml, usedCustomExtractor } = extractResult;
+  const { content, html: rawHtml, usedCustomExtractor, warnings } = extractResult;
 
   if (!rawHtml && !content) {
-    return `No content could be extracted from ${url}. The page may be empty, require JavaScript rendering, or be blocked by a paywall or captcha.`;
+    return appendExtractionWarnings(
+      `No content could be extracted from ${url}. The page may be empty, require JavaScript rendering, or be blocked by a paywall or captcha.`,
+      warnings,
+    );
   }
 
   const shouldSummarize = shouldSummarizeContent(doSummarize, query, usedCustomExtractor);
@@ -121,6 +128,12 @@ export async function extractPageContent(options: ExtractOptions): Promise<strin
     if (isAbortError(error)) throw error;
     return content;
   }
+}
+
+function appendExtractionWarnings(message: string, warnings?: string[]): string {
+  const usefulWarnings = (warnings ?? []).filter((warning) => warning.trim());
+  if (usefulWarnings.length === 0) return message;
+  return `${message}\n\nWarnings:\n${usefulWarnings.map((warning) => `- ${warning}`).join("\n")}`;
 }
 
 export const extractPageContentInputSchema = z.object({

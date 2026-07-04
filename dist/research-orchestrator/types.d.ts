@@ -11,6 +11,7 @@ export interface SearchKeys {
     serperApiKey?: string;
     tavilyApiKey?: string;
     searxngBaseUrl?: string;
+    youtubeApiKey?: string;
 }
 export type FetchFn = typeof globalThis.fetch;
 export type PageLoader = SearchExtractPageLoader;

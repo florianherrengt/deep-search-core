@@ -9,6 +9,8 @@ export { createExaSearch } from "./search/exa.js";
 export { createSerperSearch } from "./search/serper.js";
 export { createTavilySearch } from "./search/tavily.js";
 export { createSearXNGFetchSearch } from "./search/searxng.js";
+export { createYouTubeSearch } from "./search/youtube.js";
+export { downloadYouTubeSubtitles, extractYouTubeVideoId, } from "./youtube-subtitles.js";
 export { sanitizeHtml, extractVisibleTextFromHtml, MIN_CONTENT_LENGTH } from "./extract/sanitize-html.js";
 export { loadPageHtml, validateUrl } from "./extract/page-loader.js";
 export { PageExtractor } from "./extract/extractors/base.js";
@@ -17,6 +19,8 @@ export { parseRedditJson } from "./extract/extractors/reddit-json-parser.js";
 export { RedditExtractor, isRedditChallengeHtml, parseOldRedditHtml, } from "./extract/extractors/reddit.js";
 export { AmazonExtractor, isAmazonChallengePage, parseAmazonProductHtml, } from "./extract/extractors/amazon.js";
 export { ShopifyExtractor } from "./extract/extractors/shopify.js";
+export { TrustpilotExtractor, isTrustpilotUrl, isTrustpilotReviewPageUrl, isTrustpilotChallengeHtml, parseTrustpilotCompanyHtml, } from "./extract/extractors/trustpilot.js";
+export { YouTubeExtractor, formatYouTubeTranscript, isYouTubeVideoUrl, } from "./extract/extractors/youtube.js";
 export { extractPage } from "./extract/extract-page.js";
 export { SCRAPE_DO_API_URL, createScrapeDoPageLoader, fetchScrapeDoHtml, } from "./adapters/scrape-do.js";
 //# sourceMappingURL=core-api.js.map

@@ -146,6 +146,15 @@ describe("TrustpilotExtractor.canHandle / Trustpilot URL helpers", () => {
     expect(isTrustpilotReviewPageUrl(new URL("https://de.trustpilot.com/review/example.de?page=2"))).toBe(true);
   });
 
+  it("accepts the plural /reviews/ review-page form", () => {
+    // Trustpilot links to reviews via both /review/<company> (canonical
+    // company page) and /reviews/<company>, with individual reviews at
+    // /reviews/<id>. The guard must accept the plural first segment too.
+    expect(isTrustpilotReviewPageUrl(new URL("https://www.trustpilot.com/reviews/schemarabbit.com"))).toBe(true);
+    expect(isTrustpilotReviewPageUrl(new URL("https://www.trustpilot.com/reviews/abc123"))).toBe(true);
+    expect(isTrustpilotReviewPageUrl(new URL("https://uk.trustpilot.com/reviews/example.de?page=2"))).toBe(true);
+  });
+
   it("accepts regional Trustpilot roots for extractor fallback", () => {
     expect(isTrustpilotUrl(new URL("https://uk.trustpilot.com/"))).toBe(true);
     expect(isTrustpilotReviewPageUrl(new URL("https://uk.trustpilot.com/"))).toBe(false);
@@ -169,6 +178,11 @@ describe("parseTrustpilotCompanyHtml", () => {
     expect(parsed!.companyName).toBe("SchemaRabbit");
     expect(parsed!.domain).toBe("schemarabbit.com");
     expect(parsed!.profileStatus).toContain("Claimed profile");
+    // The status must not over-capture into the adjacent trust score: a previous
+    // greedy regex swallowed "...September 2025 4" (stopping at the period in
+    // "4.3"). Assert it contains the month/year but NOT the score digit.
+    expect(parsed!.profileStatus).toContain("September 2025");
+    expect(parsed!.profileStatus).not.toMatch(/\b[0-5]\b/);
     expect(parsed!.trustScore).toBe("4.3");
     expect(parsed!.starRating).toBe("4.5 out of 5");
     expect(parsed!.ratingLabel).toBe("Excellent");
@@ -227,6 +241,45 @@ describe("parseTrustpilotCompanyHtml", () => {
         new URL("https://uk.trustpilot.com/"),
       ),
     ).toBeNull();
+  });
+
+  it("parses abbreviated review counts (K/M) rendered by Trustpilot", () => {
+    // Popular companies display counts like "12K reviews" / "3.4M reviews".
+    // A previous version's number regex ([\d,]+) dropped these to null.
+    const html = `
+<html>
+<head><meta property="og:title" content="Bigco Reviews"></head>
+<body>
+  <h1>Bigco Reviews</h1>
+  <section class="trustScore">
+    <p data-rating-typography>4.5</p>
+    <p data-testid="review-count">12K reviews</p>
+  </section>
+</body>
+</html>`;
+    const parsed = parseTrustpilotCompanyHtml(
+      html,
+      new URL("https://www.trustpilot.com/review/bigco.com"),
+    );
+    expect(parsed).not.toBeNull();
+    expect(parsed!.reviewCount).toBe("12K reviews");
+  });
+
+  it("parses review count from the og:description 'what N people' form", () => {
+    const html = `
+<html>
+<head>
+  <meta property="og:title" content="Bigco Reviews">
+  <meta name="description" content="Do you agree with Bigco's 4-star rating? Check out what 3.4M people have written so far.">
+</head>
+<body><h1>Bigco</h1></body>
+</html>`;
+    const parsed = parseTrustpilotCompanyHtml(
+      html,
+      new URL("https://www.trustpilot.com/review/bigco.com"),
+    );
+    expect(parsed).not.toBeNull();
+    expect(parsed!.reviewCount).toBe("3.4M reviews");
   });
 });
 

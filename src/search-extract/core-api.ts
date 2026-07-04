@@ -43,12 +43,24 @@ export { createExaSearch } from "./search/exa.js";
 export { createSerperSearch } from "./search/serper.js";
 export { createTavilySearch } from "./search/tavily.js";
 export { createSearXNGFetchSearch } from "./search/searxng.js";
+export { createYouTubeSearch } from "./search/youtube.js";
 
 export type { BraveConfig, BraveSearchFn } from "./search/brave.js";
 export type { ExaConfig, ExaSearchFn } from "./search/exa.js";
 export type { SerperConfig, SerperSearchFn } from "./search/serper.js";
 export type { TavilyConfig, TavilySearchFn } from "./search/tavily.js";
 export type { SearXNGConfig, SearXNGFetchSearchFn } from "./search/searxng.js";
+export type { YouTubeConfig, YouTubeSearchFn } from "./search/youtube.js";
+export {
+  downloadYouTubeSubtitles,
+  extractYouTubeVideoId,
+} from "./youtube-subtitles.js";
+export type {
+  DownloadYouTubeSubtitlesConfig,
+  YouTubeSubtitleCue,
+  YouTubeSubtitleTrack,
+  YouTubeSubtitlesResult,
+} from "./youtube-subtitles.js";
 
 export { sanitizeHtml, extractVisibleTextFromHtml, MIN_CONTENT_LENGTH } from "./extract/sanitize-html.js";
 export { loadPageHtml, validateUrl } from "./extract/page-loader.js";
@@ -87,6 +99,17 @@ export type {
   TrustpilotReply,
   TrustpilotReview,
 } from "./extract/extractors/trustpilot.js";
+
+export {
+  YouTubeExtractor,
+  formatYouTubeTranscript,
+  isYouTubeVideoUrl,
+} from "./extract/extractors/youtube.js";
+export type {
+  YouTubeExtractorConfig,
+  YouTubeSubtitleDownloader,
+  YouTubeSubtitleDownloadInput,
+} from "./extract/extractors/youtube.js";
 
 export { extractPage } from "./extract/extract-page.js";
 export type { ExtractPageDeps } from "./extract/extract-page.js";

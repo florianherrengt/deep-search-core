@@ -39,6 +39,7 @@ export async function extractPage(
   const extractorInput: ExtractorInput = {
     url: parsedUrl,
     loader: deps.pageLoader ?? {},
+    fetch: deps.fetch ?? globalThis.fetch,
     signal,
   };
 

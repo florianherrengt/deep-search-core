@@ -19,6 +19,10 @@ import {
   type SearXNGConfig,
 } from "../search/searxng.js";
 import {
+  createYouTubeSearch,
+  type YouTubeConfig,
+} from "../search/youtube.js";
+import {
   DEFAULT_AGGREGATE_NUM_RESULTS,
   mergeResults,
 } from "../search/aggregate.js";
@@ -34,6 +38,7 @@ export interface CreateEngineConfig {
     serper?: SerperConfig;
     tavily?: TavilyConfig;
     searxng?: SearXNGConfig;
+    youtube?: YouTubeConfig;
   };
   pageLoader?: PageLoader;
   summarizer?: Summarizer;
@@ -98,6 +103,13 @@ function getSearchFn(
         throw new SearchProviderConfigError("SearXNG", "is not configured");
       }
       return createSearXNGFetchSearch({ ...searxngConfig, fetch: searxngConfig.fetch ?? fetchImpl });
+    }
+    case "youtube": {
+      const youtubeConfig = providers.youtube;
+      if (!youtubeConfig) {
+        throw new SearchProviderConfigError("YouTube", "is not configured");
+      }
+      return createYouTubeSearch({ ...youtubeConfig, fetch: youtubeConfig.fetch ?? fetchImpl });
     }
     case "aggregate": {
       return createAggregateSearchFn(config);
@@ -187,6 +199,15 @@ export function createSearchExtractEngine(
       options?: { signal?: AbortSignal },
     ): Promise<SearchResult[]> {
       const searchFn = getSearchFn(config, provider);
+      // The "aggregate" provider fans out to every underlying provider and
+      // rate-limits each one individually inside its own SearchFn. Wrapping
+      // that orchestration in the outer single-slot rate limiter as well would
+      // deadlock: the outer call would hold the only concurrency slot while
+      // waiting on the inner per-provider calls that need that same slot. So
+      // invoke aggregate directly and let it manage its own rate limiting.
+      if (provider === "aggregate") {
+        return searchFn(query, options?.signal);
+      }
       return rateLimit(() => searchFn(query, options?.signal), options?.signal);
     },
 

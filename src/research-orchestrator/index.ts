@@ -52,6 +52,7 @@ export { createExaSearchTool } from "./tools/search/exa";
 export { createSerperSearchTool } from "./tools/search/serper";
 export { createTavilySearchTool } from "./tools/search/tavily";
 export { createSearXNGSearchTool } from "./tools/search/searxng";
+export { createYouTubeSearchTool } from "./tools/search/youtube";
 export { createAggregateSearchTool } from "./tools/search/aggregate";
 
 export { DEFAULT_SYSTEM_PROMPT } from "./prompts/system-prompt";

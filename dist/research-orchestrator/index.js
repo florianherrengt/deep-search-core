@@ -16,6 +16,7 @@ export { createExaSearchTool } from "./tools/search/exa.js";
 export { createSerperSearchTool } from "./tools/search/serper.js";
 export { createTavilySearchTool } from "./tools/search/tavily.js";
 export { createSearXNGSearchTool } from "./tools/search/searxng.js";
+export { createYouTubeSearchTool } from "./tools/search/youtube.js";
 export { createAggregateSearchTool } from "./tools/search/aggregate.js";
 export { DEFAULT_SYSTEM_PROMPT } from "./prompts/system-prompt.js";
 export { RESEARCH_PLANNER_PROMPT } from "./prompts/research-planner-prompt.js";

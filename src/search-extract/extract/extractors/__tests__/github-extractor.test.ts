@@ -131,6 +131,15 @@ describe("GithubExtractor.canHandle / isGithubRepoOverviewUrl", () => {
     expect(isGithubRepoOverviewUrl(new URL("https://example.com/facebook/react"))).toBe(false);
   });
 
+  it("rejects user profile paths (/users/<name>) that mimic owner/repo shape", () => {
+    // /users/<name> has exactly two path segments, so without reserving
+    // "users" the extractor would claim a profile page and, when it has a
+    // README, misparse it as a repository.
+    expect(isGithubRepoOverviewUrl(new URL("https://github.com/users/torvalds"))).toBe(false);
+    expect(isGithubRepoOverviewUrl(new URL("https://github.com/users/octocat"))).toBe(false);
+    expect(ext.canHandle(new URL("https://github.com/users/torvalds"))).toBe(false);
+  });
+
   it("canHandle matches extractor", () => {
     expect(ext.canHandle(new URL("https://github.com/facebook/react"))).toBe(true);
     expect(ext.canHandle(new URL("https://github.com/facebook/react/issues/1"))).toBe(false);

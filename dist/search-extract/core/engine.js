@@ -6,6 +6,7 @@ import { createExaSearch } from "../search/exa.js";
 import { createSerperSearch } from "../search/serper.js";
 import { createTavilySearch } from "../search/tavily.js";
 import { createSearXNGFetchSearch, } from "../search/searxng.js";
+import { createYouTubeSearch, } from "../search/youtube.js";
 import { DEFAULT_AGGREGATE_NUM_RESULTS, mergeResults, } from "../search/aggregate.js";
 function getSearchFn(config, provider) {
     const fetchImpl = config.fetch;
@@ -45,6 +46,13 @@ function getSearchFn(config, provider) {
                 throw new SearchProviderConfigError("SearXNG", "is not configured");
             }
             return createSearXNGFetchSearch({ ...searxngConfig, fetch: searxngConfig.fetch ?? fetchImpl });
+        }
+        case "youtube": {
+            const youtubeConfig = providers.youtube;
+            if (!youtubeConfig) {
+                throw new SearchProviderConfigError("YouTube", "is not configured");
+            }
+            return createYouTubeSearch({ ...youtubeConfig, fetch: youtubeConfig.fetch ?? fetchImpl });
         }
         case "aggregate": {
             return createAggregateSearchFn(config);
@@ -110,6 +118,15 @@ export function createSearchExtractEngine(config) {
     return {
         async search(provider, query, options) {
             const searchFn = getSearchFn(config, provider);
+            // The "aggregate" provider fans out to every underlying provider and
+            // rate-limits each one individually inside its own SearchFn. Wrapping
+            // that orchestration in the outer single-slot rate limiter as well would
+            // deadlock: the outer call would hold the only concurrency slot while
+            // waiting on the inner per-provider calls that need that same slot. So
+            // invoke aggregate directly and let it manage its own rate limiting.
+            if (provider === "aggregate") {
+                return searchFn(query, options?.signal);
+            }
             return rateLimit(() => searchFn(query, options?.signal), options?.signal);
         },
         async searchAll(query, options) {
