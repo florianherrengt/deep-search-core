@@ -1,3 +1,5 @@
+import defaultSystemPrompt from "./prompts/system-prompt.md?raw";
+
 export { streamResearch } from "./orchestrator/stream";
 
 export { createGuardedStream } from "./orchestrator/guarded-stream";
@@ -55,7 +57,7 @@ export { createSearXNGSearchTool } from "./tools/search/searxng";
 export { createYouTubeSearchTool } from "./tools/search/youtube";
 export { createAggregateSearchTool } from "./tools/search/aggregate";
 
-export { DEFAULT_SYSTEM_PROMPT } from "./prompts/system-prompt";
+export const DEFAULT_SYSTEM_PROMPT = defaultSystemPrompt;
 export { RESEARCH_PLANNER_PROMPT } from "./prompts/research-planner-prompt";
 
 export { TOOL_NAMES } from "./tool-names";

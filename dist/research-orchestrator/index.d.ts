@@ -22,7 +22,7 @@ export { createTavilySearchTool } from "./tools/search/tavily";
 export { createSearXNGSearchTool } from "./tools/search/searxng";
 export { createYouTubeSearchTool } from "./tools/search/youtube";
 export { createAggregateSearchTool } from "./tools/search/aggregate";
-export { DEFAULT_SYSTEM_PROMPT } from "./prompts/system-prompt";
+export declare const DEFAULT_SYSTEM_PROMPT: string;
 export { RESEARCH_PLANNER_PROMPT } from "./prompts/research-planner-prompt";
 export { TOOL_NAMES } from "./tool-names";
 export type { ToolName } from "./tool-names";

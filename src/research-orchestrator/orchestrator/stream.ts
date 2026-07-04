@@ -1,6 +1,6 @@
 import type { LanguageModel, UIMessage, UIMessageChunk, ToolSet } from "ai";
 import { createGuardedStream } from "./guarded-stream";
-import { DEFAULT_SYSTEM_PROMPT } from "../prompts/system-prompt";
+import DEFAULT_SYSTEM_PROMPT from "../prompts/system-prompt.md?raw";
 import type { SearchKeys, FetchFn, PageLoader, HiddenTextPredicate, OrchestratorEvent, StreamResearchOptions } from "../types";
 
 export function streamResearch(options: StreamResearchOptions): ReadableStream<UIMessageChunk> {

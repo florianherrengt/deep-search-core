@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { DEFAULT_SYSTEM_PROMPT } from "../../src/research-orchestrator/prompts/system-prompt";
+import { DEFAULT_SYSTEM_PROMPT } from "../../src/research-orchestrator";
 import { RESEARCH_PLANNER_PROMPT } from "../../src/research-orchestrator/prompts/research-planner-prompt";
 
 describe("DEFAULT_SYSTEM_PROMPT", () => {
-  it("is generated from the canonical markdown prompt", () => {
+  it("is imported from the canonical markdown prompt", () => {
     const markdownPrompt = readFileSync(
       new URL("../../src/research-orchestrator/prompts/system-prompt.md", import.meta.url),
       "utf8",
