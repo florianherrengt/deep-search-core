@@ -49,6 +49,13 @@ export { createResearchCheckpointTool } from "./tools/research-checkpoint";
 export { createFactsCheckTool } from "./tools/facts-check";
 export type { CreateFactsCheckToolConfig } from "./tools/facts-check";
 export { createSearchTools } from "./tools/search";
+export {
+  normalizeSearchKeys,
+  hasSearchProviders,
+  hasAggregatableSearchProviders,
+  getConfiguredSearchProviderIds,
+} from "./tools/search/search-keys";
+export type { ConfiguredSearchProviderId } from "./tools/search/search-keys";
 export { createBraveSearchTool } from "./tools/search/brave";
 export { createExaSearchTool } from "./tools/search/exa";
 export { createSerperSearchTool } from "./tools/search/serper";
@@ -56,6 +63,26 @@ export { createTavilySearchTool } from "./tools/search/tavily";
 export { createSearXNGSearchTool } from "./tools/search/searxng";
 export { createYouTubeSearchTool } from "./tools/search/youtube";
 export { createAggregateSearchTool } from "./tools/search/aggregate";
+export type { CreateAggregateSearchToolOptions } from "./tools/search/aggregate";
+export { createScopedFileTools } from "./tools/scoped-file-tools";
+export type {
+  CreateScopedFileToolsConfig,
+  ScopedFileMutationEvent,
+} from "./tools/scoped-file-tools";
+export {
+  createArtifactStore,
+  normalizeArtifactRelativePath,
+  sanitizeArtifactPathSegment,
+  joinArtifactPaths,
+} from "./artifacts/artifact-store";
+export type {
+  ArtifactEntryType,
+  ArtifactListEntry,
+  ArtifactStorage,
+  ArtifactStorageEntry,
+  ArtifactStore,
+  CreateArtifactStoreConfig,
+} from "./artifacts/artifact-store";
 
 export const DEFAULT_SYSTEM_PROMPT = defaultSystemPrompt;
 export { RESEARCH_PLANNER_PROMPT } from "./prompts/research-planner-prompt";

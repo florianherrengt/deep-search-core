@@ -6,51 +6,41 @@ import { createTavilySearchTool } from "./tavily";
 import { createSearXNGSearchTool } from "./searxng";
 import { createYouTubeSearchTool } from "./youtube";
 import { createAggregateSearchTool } from "./aggregate";
+import {
+  hasAggregatableSearchProviders,
+  normalizeSearchKeys,
+} from "./search-keys";
 import { isValidServiceUrl } from "../../utils/url-validation";
 import type { ToolSet } from "ai";
-
-/**
- * True if at least one search provider credential is configured. Used to
- * decide whether the aggregate tool has anything to fan out to.
- */
-function hasAnySearchKey(searchKeys: SearchKeys | undefined): boolean {
-  if (!searchKeys) return false;
-  return Boolean(
-    searchKeys.braveApiKey ??
-      searchKeys.exaApiKey ??
-      searchKeys.serperApiKey ??
-      searchKeys.tavilyApiKey ??
-      (searchKeys.searxngBaseUrl && isValidServiceUrl(searchKeys.searxngBaseUrl)),
-  );
-}
 
 export function createSearchTools(
   searchKeys: SearchKeys | undefined,
   fetchFn: typeof globalThis.fetch,
 ): ToolSet {
+  const keys = normalizeSearchKeys(searchKeys);
   const tools: ToolSet = {};
-  if (searchKeys?.braveApiKey) {
-    tools.brave_search = createBraveSearchTool(searchKeys.braveApiKey, fetchFn);
+  if (keys.braveApiKey) {
+    tools.brave_search = createBraveSearchTool(keys.braveApiKey, fetchFn);
   }
-  if (searchKeys?.exaApiKey) {
-    tools.exa_search = createExaSearchTool(searchKeys.exaApiKey, fetchFn);
+  if (keys.exaApiKey) {
+    tools.exa_search = createExaSearchTool(keys.exaApiKey, fetchFn);
   }
-  if (searchKeys?.serperApiKey) {
-    tools.serper_search = createSerperSearchTool(searchKeys.serperApiKey, fetchFn);
+  if (keys.serperApiKey) {
+    tools.serper_search = createSerperSearchTool(keys.serperApiKey, fetchFn);
   }
-  if (searchKeys?.tavilyApiKey) {
-    tools.tavily_search = createTavilySearchTool(searchKeys.tavilyApiKey, fetchFn);
+  if (keys.tavilyApiKey) {
+    tools.tavily_search = createTavilySearchTool(keys.tavilyApiKey, fetchFn);
   }
-  if (searchKeys?.searxngBaseUrl && isValidServiceUrl(searchKeys.searxngBaseUrl)) {
-    tools.searxng_search = createSearXNGSearchTool(searchKeys.searxngBaseUrl, fetchFn);
+  if (keys.searxngBaseUrl && isValidServiceUrl(keys.searxngBaseUrl)) {
+    tools.searxng_search = createSearXNGSearchTool(keys.searxngBaseUrl, fetchFn);
   }
-  if (searchKeys?.youtubeApiKey) {
-    tools.youtube_search = createYouTubeSearchTool(searchKeys.youtubeApiKey, fetchFn);
+  if (keys.youtubeApiKey) {
+    tools.youtube_search = createYouTubeSearchTool(keys.youtubeApiKey, fetchFn);
   }
   // The aggregate tool fans out to every configured provider above, so only
   // register it when at least one is available.
-  if (hasAnySearchKey(searchKeys)) {
-    tools.aggregate_search = createAggregateSearchTool(searchKeys!, fetchFn);
+  if (hasAggregatableSearchProviders(keys)) {
+    tools.aggregate_search = createAggregateSearchTool(keys, fetchFn);
   }
   return tools;
 }

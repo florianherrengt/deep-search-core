@@ -23,6 +23,7 @@ export {
   SearchProviderConfigError,
   SearchProviderError,
   SearchProviderResponseError,
+  AggregateSearchError,
   UrlValidationError,
 } from "./core/errors.js";
 

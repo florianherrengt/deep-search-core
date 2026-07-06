@@ -1,6 +1,6 @@
 export { SEARCH_PROVIDER_NAMES, AGGREGATABLE_PROVIDER_NAMES, searchResultSchema, searchQueryInputSchema, } from "./core/types.js";
 export type { SearchProviderName, AggregatableProviderName, SearchResult, MergedResult, SearchOptions, SearchAllOptions, PageLoader, PageLoadOptions, PageRenderOptions, Summarizer, ExtractOptions, ExtractResult, } from "./core/types.js";
-export { SearchProviderConfigError, SearchProviderError, SearchProviderResponseError, UrlValidationError, } from "./core/errors.js";
+export { SearchProviderConfigError, SearchProviderError, SearchProviderResponseError, AggregateSearchError, UrlValidationError, } from "./core/errors.js";
 export { rateLimit, setRateLimiter, resetRateLimiter, getRateLimiter, } from "./core/rate-limit.js";
 export type { RateLimiter } from "./core/rate-limit.js";
 export { createSearchExtractEngine } from "./core/engine.js";

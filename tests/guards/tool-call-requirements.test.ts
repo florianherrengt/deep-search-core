@@ -58,6 +58,7 @@ describe("TOOL_CALL_REQUIREMENTS", () => {
       TOOL_NAMES.tavily_search,
       TOOL_NAMES.searxng_search,
       TOOL_NAMES.youtube_search,
+      TOOL_NAMES.aggregate_search,
     ]);
   });
 });
