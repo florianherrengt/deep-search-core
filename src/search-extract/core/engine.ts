@@ -23,6 +23,10 @@ import {
   type YouTubeConfig,
 } from "../search/youtube.js";
 import {
+  createHackerNewsSearch,
+  type HackerNewsConfig,
+} from "../search/hacker-news.js";
+import {
   DEFAULT_AGGREGATE_NUM_RESULTS,
   mergeResults,
 } from "../search/aggregate.js";
@@ -39,6 +43,7 @@ export interface CreateEngineConfig {
     tavily?: TavilyConfig;
     searxng?: SearXNGConfig;
     youtube?: YouTubeConfig;
+    hackerNews?: HackerNewsConfig;
   };
   pageLoader?: PageLoader;
   summarizer?: Summarizer;
@@ -110,6 +115,19 @@ function getSearchFn(
         throw new SearchProviderConfigError("YouTube", "is not configured");
       }
       return createYouTubeSearch({ ...youtubeConfig, fetch: youtubeConfig.fetch ?? fetchImpl });
+    }
+    case "hackernews": {
+      const hackerNewsConfig = providers.hackerNews;
+      if (!hackerNewsConfig) {
+        throw new SearchProviderConfigError(
+          "Hacker News",
+          "is not configured",
+        );
+      }
+      return createHackerNewsSearch({
+        ...hackerNewsConfig,
+        fetch: hackerNewsConfig.fetch ?? fetchImpl,
+      });
     }
     case "aggregate": {
       return createAggregateSearchFn(config);

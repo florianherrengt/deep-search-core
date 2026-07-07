@@ -7,6 +7,7 @@ export const TOOL_NAMES = {
   tavily_search: "tavily_search",
   searxng_search: "searxng_search",
   youtube_search: "youtube_search",
+  hacker_news_search: "hacker_news_search",
   aggregate_search: "aggregate_search",
   extract_page_content: "extract_page_content",
   research_checkpoint: "research_checkpoint",

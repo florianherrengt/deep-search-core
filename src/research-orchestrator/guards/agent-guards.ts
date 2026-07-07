@@ -140,6 +140,7 @@ const RESEARCH_TOOL_NAMES = new Set<string>([
   TOOL_NAMES.tavily_search,
   TOOL_NAMES.searxng_search,
   TOOL_NAMES.youtube_search,
+  TOOL_NAMES.hacker_news_search,
   TOOL_NAMES.extract_page_content,
 ]);
 

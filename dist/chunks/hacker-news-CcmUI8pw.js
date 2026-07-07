@@ -1,7 +1,7 @@
 import { z } from "zod";
 import PQueue from "p-queue";
-import ipaddr from "ipaddr.js";
 import { load } from "cheerio";
+import ipaddr from "ipaddr.js";
 const SEARCH_PROVIDER_NAMES = [
   "brave",
   "exa",
@@ -9,6 +9,7 @@ const SEARCH_PROVIDER_NAMES = [
   "tavily",
   "searxng",
   "youtube",
+  "hackernews",
   "aggregate"
 ];
 const AGGREGATABLE_PROVIDER_NAMES = [
@@ -141,7 +142,7 @@ function tryParseJson(text) {
     return null;
   }
 }
-const API_BASE_URL$4 = "https://api.search.brave.com/res/v1";
+const API_BASE_URL$5 = "https://api.search.brave.com/res/v1";
 const BraveWebResponseSchema = z.object({
   web: z.object({
     results: z.array(searchResultSchema).optional()
@@ -162,7 +163,7 @@ function createBraveSearch(config) {
           "requires a valid apiKey"
         );
       }
-      const url = new URL(`${API_BASE_URL$4}/web/search`);
+      const url = new URL(`${API_BASE_URL$5}/web/search`);
       url.searchParams.set("q", query);
       const response = await fetchImpl(url.toString(), {
         headers: {
@@ -182,7 +183,7 @@ function createBraveSearch(config) {
     }
   });
 }
-const API_BASE_URL$3 = "https://api.exa.ai";
+const API_BASE_URL$4 = "https://api.exa.ai";
 const ExaWebResponseSchema = z.object({
   results: z.array(
     z.object({
@@ -211,7 +212,7 @@ function createExaSearch(config) {
           "requires a valid apiKey"
         );
       }
-      const response = await fetchImpl(`${API_BASE_URL$3}/search`, {
+      const response = await fetchImpl(`${API_BASE_URL$4}/search`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -236,7 +237,7 @@ function createExaSearch(config) {
     }
   });
 }
-const API_BASE_URL$2 = "https://google.serper.dev";
+const API_BASE_URL$3 = "https://google.serper.dev";
 const SerperWebResponseSchema = z.object({
   organic: z.array(
     z.object({
@@ -265,7 +266,7 @@ function createSerperSearch(config) {
           "requires a valid apiKey"
         );
       }
-      const response = await fetchImpl(`${API_BASE_URL$2}/search`, {
+      const response = await fetchImpl(`${API_BASE_URL$3}/search`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -285,7 +286,7 @@ function createSerperSearch(config) {
     }
   });
 }
-const API_BASE_URL$1 = "https://api.tavily.com";
+const API_BASE_URL$2 = "https://api.tavily.com";
 const TavilyWebResponseSchema = z.object({
   results: z.array(
     z.object({
@@ -314,7 +315,7 @@ function createTavilySearch(config) {
           "requires a valid apiKey"
         );
       }
-      const response = await fetchImpl(`${API_BASE_URL$1}/search`, {
+      const response = await fetchImpl(`${API_BASE_URL$2}/search`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -379,7 +380,7 @@ function createSearXNGFetchSearch(config = {}) {
     }
   });
 }
-const API_BASE_URL = "https://www.googleapis.com/youtube/v3";
+const API_BASE_URL$1 = "https://www.googleapis.com/youtube/v3";
 const DEFAULT_MAX_RESULTS = 5;
 const MAX_RESULTS = 50;
 const YouTubeSearchResponseSchema = z.object({
@@ -400,7 +401,7 @@ const YouTubeSearchResponseSchema = z.object({
 function createYouTubeSearch(config) {
   const fetchImpl = config.fetch ?? globalThis.fetch;
   const apiKey = config.apiKey?.trim() ?? "";
-  const maxResults = normalizeMaxResults(config.maxResults);
+  const maxResults = normalizeMaxResults$1(config.maxResults);
   return createSearchProvider({
     providerName: "YouTube",
     responseSchema: YouTubeSearchResponseSchema,
@@ -423,7 +424,7 @@ function createYouTubeSearch(config) {
           "requires a valid apiKey"
         );
       }
-      const url = new URL(`${API_BASE_URL}/search`);
+      const url = new URL(`${API_BASE_URL$1}/search`);
       url.searchParams.set("part", "snippet");
       url.searchParams.set("type", "video");
       url.searchParams.set("q", query);
@@ -446,7 +447,7 @@ function createYouTubeSearch(config) {
     }
   });
 }
-function normalizeMaxResults(maxResults) {
+function normalizeMaxResults$1(maxResults) {
   if (!Number.isFinite(maxResults)) return DEFAULT_MAX_RESULTS;
   return Math.min(
     MAX_RESULTS,
@@ -465,6 +466,91 @@ function formatYouTubeDescription(item, videoId) {
     parts.push(item.snippet.description);
   }
   return parts.join("\n");
+}
+const API_BASE_URL = "https://hn.algolia.com/api/v1";
+const DEFAULT_HITS_PER_PAGE = 10;
+const MAX_HITS_PER_PAGE = 100;
+const HackerNewsSearchResponseSchema = z.object({
+  hits: z.array(
+    z.object({
+      objectID: z.string(),
+      title: z.string().nullable().optional(),
+      story_title: z.string().nullable().optional(),
+      url: z.string().nullable().optional(),
+      story_url: z.string().nullable().optional(),
+      author: z.string().nullable().optional(),
+      points: z.number().nullable().optional(),
+      num_comments: z.number().nullable().optional(),
+      created_at: z.string().nullable().optional(),
+      story_text: z.string().nullable().optional(),
+      comment_text: z.string().nullable().optional()
+    })
+  ).optional()
+});
+function createHackerNewsSearch(config = {}) {
+  const fetchImpl = config.fetch ?? globalThis.fetch;
+  const hitsPerPage = normalizeMaxResults(config.maxResults);
+  return createSearchProvider({
+    providerName: "Hacker News",
+    responseSchema: HackerNewsSearchResponseSchema,
+    throwOnParseError: true,
+    mapResults: (response) => (response.hits ?? []).map(mapHackerNewsHit),
+    execute: async (query, abortSignal) => {
+      const url = new URL(`${API_BASE_URL}/search`);
+      url.searchParams.set("query", query);
+      url.searchParams.set("tags", "story");
+      url.searchParams.set("hitsPerPage", String(hitsPerPage));
+      const response = await fetchImpl(url.toString(), {
+        headers: { accept: "application/json" },
+        signal: abortSignal
+      });
+      if (!response.ok) {
+        const errText = await formatSearchHttpError("Hacker News", response);
+        const match = errText.match(/HTTP (\d+)/);
+        const status = match ? parseInt(match[1], 10) : 0;
+        const bodyPart = errText.replace(/^.*?: /, "");
+        throw new SearchProviderError("Hacker News", status, bodyPart);
+      }
+      return await response.text();
+    }
+  });
+}
+function mapHackerNewsHit(hit) {
+  const title = hit.title ?? hit.story_title ?? `Hacker News item ${hit.objectID}`;
+  return {
+    title,
+    url: formatHackerNewsItemUrl$1(hit.objectID),
+    description: formatHackerNewsDescription(hit)
+  };
+}
+function formatHackerNewsDescription(hit) {
+  const parts = [`HN item ID: ${hit.objectID}`];
+  const externalUrl = hit.url ?? hit.story_url;
+  if (hit.author) parts.push(`Author: ${hit.author}`);
+  if (typeof hit.points === "number") parts.push(`Points: ${hit.points}`);
+  if (typeof hit.num_comments === "number") {
+    parts.push(`Comments: ${hit.num_comments}`);
+  }
+  if (hit.created_at) parts.push(`Created: ${hit.created_at}`);
+  if (externalUrl) parts.push(`External URL: ${externalUrl}`);
+  const text = htmlToText(hit.story_text ?? hit.comment_text ?? "");
+  if (text) parts.push(text);
+  return parts.join("\n");
+}
+function formatHackerNewsItemUrl$1(objectID) {
+  return `https://news.ycombinator.com/item?id=${encodeURIComponent(objectID)}`;
+}
+function htmlToText(html) {
+  if (!html.trim()) return "";
+  const $ = load(html);
+  return $("body").text().replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+}
+function normalizeMaxResults(maxResults) {
+  if (!Number.isFinite(maxResults)) return DEFAULT_HITS_PER_PAGE;
+  return Math.min(
+    MAX_HITS_PER_PAGE,
+    Math.max(1, Math.trunc(maxResults ?? DEFAULT_HITS_PER_PAGE))
+  );
 }
 const TRACKING_PARAMS = /* @__PURE__ */ new Set([
   "utm_source",
@@ -599,6 +685,19 @@ function getSearchFn(config, provider) {
       }
       return createYouTubeSearch({ ...youtubeConfig, fetch: youtubeConfig.fetch ?? fetchImpl });
     }
+    case "hackernews": {
+      const hackerNewsConfig = providers.hackerNews;
+      if (!hackerNewsConfig) {
+        throw new SearchProviderConfigError(
+          "Hacker News",
+          "is not configured"
+        );
+      }
+      return createHackerNewsSearch({
+        ...hackerNewsConfig,
+        fetch: hackerNewsConfig.fetch ?? fetchImpl
+      });
+    }
     case "aggregate": {
       return createAggregateSearchFn(config);
     }
@@ -701,7 +800,7 @@ function createSearchExtractEngine(config) {
       return merged;
     },
     async extract(url, options) {
-      const { extractPage } = await import("./extract-page-CQXEvqNy.js").then((n) => n.b);
+      const { extractPage } = await import("./extract-page-Df-9mRr4.js").then((n) => n.b);
       return extractPage(url, options, getExtractDeps(config));
     }
   };
@@ -1701,7 +1800,7 @@ function isTrustpilotReviewPageUrl(url) {
 function normalizeText(text) {
   return text.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
 }
-function normalizeMarkdown(text) {
+function normalizeMarkdown$1(text) {
   return text.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/^\s+|\s+$/g, "");
 }
 function firstNonEmpty(...values) {
@@ -2309,7 +2408,7 @@ function formatParsedTrustpilotPage(page) {
       lines.push("");
     }
   }
-  return normalizeMarkdown(lines.join("\n"));
+  return normalizeMarkdown$1(lines.join("\n"));
 }
 class TrustpilotExtractor extends PageExtractor {
   canHandle(url) {
@@ -2457,28 +2556,309 @@ function formatTimestamp(ms) {
   }
   return `${minuteText}:${secondText}`;
 }
+const FIREBASE_API_BASE_URL = "https://hacker-news.firebaseio.com/v0";
+const DEFAULT_MAX_COMMENTS = 80;
+const MAX_COMMENTS = 500;
+const DEFAULT_MAX_DEPTH = 4;
+const MAX_DEPTH = 12;
+const HackerNewsItemSchema = z.object({
+  id: z.number(),
+  deleted: z.boolean().optional(),
+  type: z.enum(["job", "story", "comment", "poll", "pollopt"]).optional(),
+  by: z.string().optional(),
+  time: z.number().optional(),
+  text: z.string().optional(),
+  dead: z.boolean().optional(),
+  parent: z.number().optional(),
+  poll: z.number().optional(),
+  kids: z.array(z.number()).optional(),
+  url: z.string().optional(),
+  score: z.number().optional(),
+  title: z.string().optional(),
+  descendants: z.number().optional()
+}).passthrough();
+function isHackerNewsItemUrl(url) {
+  return url.hostname === "news.ycombinator.com" && url.pathname === "/item" && extractHackerNewsItemId(url) != null;
+}
+function extractHackerNewsItemId(url) {
+  const idParam = url.searchParams.get("id");
+  if (!idParam || !/^\d+$/.test(idParam)) return null;
+  const id = Number.parseInt(idParam, 10);
+  return Number.isSafeInteger(id) ? id : null;
+}
+function hackerNewsHtmlToMarkdown(html) {
+  if (!html?.trim()) return "";
+  const $ = load(html);
+  const markdown = $.root().contents().toArray().map((node) => nodeToMarkdown($, node)).join("");
+  return normalizeMarkdown(markdown);
+}
+function formatHackerNewsThread(thread) {
+  const { item, comments, warnings } = thread;
+  const lines = [];
+  const title = item.title || `Hacker News ${item.type ?? "item"} ${item.id}`;
+  lines.push(`# ${title}`);
+  lines.push("");
+  lines.push(`Source: ${formatHackerNewsItemUrl(item.id)}`);
+  lines.push(`Item ID: ${item.id}`);
+  if (item.type) lines.push(`Type: ${item.type}`);
+  if (item.by) lines.push(`Author: ${item.by}`);
+  if (typeof item.score === "number") lines.push(`Score: ${item.score}`);
+  if (typeof item.descendants === "number") {
+    lines.push(`Comments: ${item.descendants}`);
+  }
+  const postedAt = formatUnixTime(item.time);
+  if (postedAt) lines.push(`Posted: ${postedAt}`);
+  if (item.url) lines.push(`External URL: ${item.url}`);
+  if (typeof item.parent === "number") lines.push(`Parent: ${item.parent}`);
+  const text = hackerNewsHtmlToMarkdown(item.text);
+  if (text) {
+    lines.push("");
+    lines.push("## Text");
+    lines.push("");
+    lines.push(text);
+  }
+  if (comments.length > 0) {
+    lines.push("");
+    lines.push("## Comments");
+    lines.push("");
+    for (const comment of comments) {
+      appendComment(lines, comment, 0);
+    }
+  }
+  if (warnings.length > 0) {
+    lines.push("");
+    lines.push("## Extraction Notes");
+    lines.push("");
+    for (const warning of warnings) {
+      lines.push(`- ${warning}`);
+    }
+  }
+  return normalizeMarkdown(lines.join("\n"));
+}
+class HackerNewsExtractor extends PageExtractor {
+  maxComments;
+  maxDepth;
+  constructor(config = {}) {
+    super();
+    this.maxComments = normalizeMaxComments(config.maxComments);
+    this.maxDepth = normalizeMaxDepth(config.maxDepth);
+  }
+  canHandle(url) {
+    return isHackerNewsItemUrl(url);
+  }
+  async extract(input) {
+    const id = extractHackerNewsItemId(input.url);
+    if (id == null) return null;
+    const fetchImpl = input.fetch ?? globalThis.fetch;
+    const item = await fetchHackerNewsItem(fetchImpl, id, input.signal);
+    if (!item || item.deleted || item.dead) return null;
+    const state = {
+      count: 0,
+      maxComments: this.maxComments,
+      maxDepth: this.maxDepth,
+      limitWarningAdded: false,
+      depthWarningAdded: false,
+      warnings: []
+    };
+    const comments = await fetchHackerNewsComments(
+      fetchImpl,
+      item.kids ?? [],
+      1,
+      state,
+      input.signal
+    );
+    const content = formatHackerNewsThread({
+      item,
+      comments,
+      warnings: state.warnings
+    });
+    return {
+      content,
+      warnings: state.warnings
+    };
+  }
+}
+async function fetchHackerNewsComments(fetchImpl, ids, depth, state, signal) {
+  if (depth > state.maxDepth) {
+    addDepthWarning(state);
+    return [];
+  }
+  const comments = [];
+  for (const id of ids) {
+    if (state.count >= state.maxComments) {
+      addLimitWarning(state);
+      break;
+    }
+    const item = await fetchHackerNewsItem(fetchImpl, id, signal);
+    if (!item || item.deleted || item.dead || item.type !== "comment") {
+      continue;
+    }
+    state.count += 1;
+    const replies = await fetchHackerNewsComments(
+      fetchImpl,
+      item.kids ?? [],
+      depth + 1,
+      state,
+      signal
+    );
+    comments.push({
+      id: item.id,
+      author: item.by ?? "[unknown]",
+      time: item.time,
+      text: hackerNewsHtmlToMarkdown(item.text) || "[deleted]",
+      replies
+    });
+  }
+  return comments;
+}
+async function fetchHackerNewsItem(fetchImpl, id, signal) {
+  const response = await fetchImpl(`${FIREBASE_API_BASE_URL}/item/${id}.json`, {
+    headers: { accept: "application/json" },
+    signal
+  });
+  if (!response.ok) {
+    throw new Error(
+      `Hacker News item ${id} fetch failed with HTTP ${response.status}`
+    );
+  }
+  const raw = await response.text();
+  const parsed = JSON.parse(raw);
+  if (parsed == null) return null;
+  const result = HackerNewsItemSchema.safeParse(parsed);
+  return result.success ? result.data : null;
+}
+function nodeToMarkdown($, node) {
+  if (node.type === "text") {
+    const raw = node.data ?? "";
+    return raw.replace(/\s+/g, " ");
+  }
+  if (node.type !== "tag") return "";
+  const $node = $(node);
+  const tag = node.tagName.toLowerCase();
+  const inner = () => $node.contents().toArray().map((child) => nodeToMarkdown($, child)).join("");
+  switch (tag) {
+    case "p":
+      return `
+
+${inner().trim()}
+
+`;
+    case "br":
+      return "\n";
+    case "a": {
+      const href = $node.attr("href") ?? "";
+      const text = inner().trim() || href;
+      if (!text) return "";
+      return href && href !== text ? `${text} (${href})` : text;
+    }
+    case "pre": {
+      const code = $node.text().trim();
+      return code ? `
+
+\`\`\`
+${code}
+\`\`\`
+
+` : "";
+    }
+    case "code": {
+      const code = $node.text().trim();
+      return code ? `\`${code}\`` : "";
+    }
+    case "i":
+    case "em": {
+      const text = inner().trim();
+      return text ? `*${text}*` : "";
+    }
+    case "b":
+    case "strong": {
+      const text = inner().trim();
+      return text ? `**${text}**` : "";
+    }
+    default:
+      return inner();
+  }
+}
+function appendComment(lines, comment, depth) {
+  const indent = "  ".repeat(depth);
+  const meta = [`**${comment.author}**`];
+  const postedAt = formatUnixTime(comment.time);
+  if (postedAt) meta.push(postedAt);
+  lines.push(`${indent}- ${meta.join(" · ")}`);
+  lines.push(indentBlock(comment.text, `${indent}  `));
+  for (const reply of comment.replies) {
+    appendComment(lines, reply, depth + 1);
+  }
+}
+function indentBlock(text, indent) {
+  return text.split("\n").map((line) => line.trim() ? `${indent}${line}` : "").join("\n");
+}
+function addLimitWarning(state) {
+  if (state.limitWarningAdded) return;
+  state.limitWarningAdded = true;
+  state.warnings.push(
+    `Comment extraction stopped after ${state.maxComments} comments.`
+  );
+}
+function addDepthWarning(state) {
+  if (state.depthWarningAdded) return;
+  state.depthWarningAdded = true;
+  state.warnings.push(
+    `Comment extraction stopped at depth ${state.maxDepth}.`
+  );
+}
+function formatHackerNewsItemUrl(id) {
+  return `https://news.ycombinator.com/item?id=${id}`;
+}
+function formatUnixTime(time) {
+  if (typeof time !== "number" || !Number.isFinite(time)) return null;
+  return new Date(time * 1e3).toISOString();
+}
+function normalizeMarkdown(text) {
+  return text.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/^\s+|\s+$/g, "");
+}
+function normalizeMaxComments(maxComments) {
+  if (!Number.isFinite(maxComments)) return DEFAULT_MAX_COMMENTS;
+  return Math.min(
+    MAX_COMMENTS,
+    Math.max(0, Math.trunc(maxComments ?? DEFAULT_MAX_COMMENTS))
+  );
+}
+function normalizeMaxDepth(maxDepth) {
+  if (!Number.isFinite(maxDepth)) return DEFAULT_MAX_DEPTH;
+  return Math.min(
+    MAX_DEPTH,
+    Math.max(0, Math.trunc(maxDepth ?? DEFAULT_MAX_DEPTH))
+  );
+}
 export {
   AggregateSearchError as A,
-  parseAmazonProductHtml as B,
-  parseOldRedditHtml as C,
-  parseRedditJson as D,
-  parseTrustpilotCompanyHtml as E,
-  rateLimit as F,
-  resetRateLimiter as G,
-  searchQueryInputSchema as H,
-  searchResultSchema as I,
-  setRateLimiter as J,
-  validateUrl as K,
-  AGGREGATABLE_PROVIDER_NAMES as L,
-  DEFAULT_AGGREGATE_NUM_RESULTS as M,
-  mergeResults as N,
-  normalizeUrl as O,
+  isTrustpilotChallengeHtml as B,
+  isTrustpilotReviewPageUrl as C,
+  isTrustpilotUrl as D,
+  isYouTubeVideoUrl as E,
+  loadPageHtml as F,
+  parseAmazonProductHtml as G,
+  HackerNewsExtractor as H,
+  parseOldRedditHtml as I,
+  parseRedditJson as J,
+  parseTrustpilotCompanyHtml as K,
+  rateLimit as L,
+  resetRateLimiter as M,
+  searchQueryInputSchema as N,
+  searchResultSchema as O,
   PageExtractor as P,
+  setRateLimiter as Q,
   RedditExtractor as R,
   SEARCH_PROVIDER_NAMES as S,
   TrustpilotExtractor as T,
   UrlValidationError as U,
+  validateUrl as V,
+  AGGREGATABLE_PROVIDER_NAMES as W,
+  DEFAULT_AGGREGATE_NUM_RESULTS as X,
   YouTubeExtractor as Y,
+  mergeResults as Z,
+  normalizeUrl as _,
   AmazonExtractor as a,
   SearchProviderConfigError as b,
   SearchProviderError as c,
@@ -2486,24 +2866,24 @@ export {
   ShopifyExtractor as e,
   createBraveSearch as f,
   createExaSearch as g,
-  createSearXNGFetchSearch as h,
-  createSearchExtractEngine as i,
-  createSearchProvider as j,
-  createSerperSearch as k,
-  createTavilySearch as l,
-  createYouTubeSearch as m,
-  downloadYouTubeSubtitles as n,
-  extractYouTubeVideoId as o,
-  formatSearchHttpError as p,
-  formatSearchResults as q,
-  formatYouTubeTranscript as r,
-  getRateLimiter as s,
-  isAmazonChallengePage as t,
-  isRedditChallengeHtml as u,
-  isTrustpilotChallengeHtml as v,
-  isTrustpilotReviewPageUrl as w,
-  isTrustpilotUrl as x,
-  isYouTubeVideoUrl as y,
-  loadPageHtml as z
+  createHackerNewsSearch as h,
+  createSearXNGFetchSearch as i,
+  createSearchExtractEngine as j,
+  createSearchProvider as k,
+  createSerperSearch as l,
+  createTavilySearch as m,
+  createYouTubeSearch as n,
+  downloadYouTubeSubtitles as o,
+  extractHackerNewsItemId as p,
+  extractYouTubeVideoId as q,
+  formatHackerNewsThread as r,
+  formatSearchHttpError as s,
+  formatSearchResults as t,
+  formatYouTubeTranscript as u,
+  getRateLimiter as v,
+  hackerNewsHtmlToMarkdown as w,
+  isAmazonChallengePage as x,
+  isHackerNewsItemUrl as y,
+  isRedditChallengeHtml as z
 };
-//# sourceMappingURL=youtube-B2M5GRew.js.map
+//# sourceMappingURL=hacker-news-CcmUI8pw.js.map

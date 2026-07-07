@@ -45,6 +45,7 @@ function createTestEngine(
       tavily: { apiKey: "key-tavily" },
       searxng: { baseUrl: "http://localhost:8080" },
       youtube: { apiKey: "key-youtube" },
+      hackerNews: {},
     },
   });
 }
@@ -154,6 +155,32 @@ describe("engine search dispatch", () => {
         title: "YouTube Result",
         url: "https://www.youtube.com/watch?v=abc123DEF45",
         description: "Video ID: abc123DEF45\nChannel: Channel\nVideo description",
+      },
+    ]);
+  });
+
+  it("dispatches to hackernews provider and returns HN story results", async () => {
+    const mockFetch = vi.fn().mockResolvedValue(
+      makeResponse(200, {
+        hits: [
+          {
+            objectID: "123",
+            title: "HN Result",
+            author: "alice",
+            points: 10,
+          },
+        ],
+      }),
+    );
+
+    const engine = createTestEngine(mockFetch);
+    const results = await engine.search("hackernews", "test query");
+
+    expect(results).toEqual([
+      {
+        title: "HN Result",
+        url: "https://news.ycombinator.com/item?id=123",
+        description: "HN item ID: 123\nAuthor: alice\nPoints: 10",
       },
     ]);
   });

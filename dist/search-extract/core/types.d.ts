@@ -1,5 +1,5 @@
 import { z } from "zod";
-export declare const SEARCH_PROVIDER_NAMES: readonly ["brave", "exa", "serper", "tavily", "searxng", "youtube", "aggregate"];
+export declare const SEARCH_PROVIDER_NAMES: readonly ["brave", "exa", "serper", "tavily", "searxng", "youtube", "hackernews", "aggregate"];
 export type SearchProviderName = (typeof SEARCH_PROVIDER_NAMES)[number];
 /**
  * Providers that can be queried individually and aggregated by the

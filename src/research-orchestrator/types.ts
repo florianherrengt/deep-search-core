@@ -15,6 +15,7 @@ export interface SearchKeys {
   tavilyApiKey?: string;
   searxngBaseUrl?: string;
   youtubeApiKey?: string;
+  hackerNews?: boolean;
 }
 
 export type FetchFn = typeof globalThis.fetch;

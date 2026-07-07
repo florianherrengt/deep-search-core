@@ -23,6 +23,7 @@ export { createSerperSearchTool } from "./tools/search/serper";
 export { createTavilySearchTool } from "./tools/search/tavily";
 export { createSearXNGSearchTool } from "./tools/search/searxng";
 export { createYouTubeSearchTool } from "./tools/search/youtube";
+export { createHackerNewsSearchTool } from "./tools/search/hacker-news";
 export { createAggregateSearchTool } from "./tools/search/aggregate";
 export type { CreateAggregateSearchToolOptions } from "./tools/search/aggregate";
 export { createScopedFileTools } from "./tools/scoped-file-tools";

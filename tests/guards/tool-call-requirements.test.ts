@@ -58,6 +58,7 @@ describe("TOOL_CALL_REQUIREMENTS", () => {
       TOOL_NAMES.tavily_search,
       TOOL_NAMES.searxng_search,
       TOOL_NAMES.youtube_search,
+      TOOL_NAMES.hacker_news_search,
       TOOL_NAMES.aggregate_search,
     ]);
   });
@@ -128,6 +129,19 @@ describe("evaluateToolCallRequirementForUIMessages", () => {
     const messages: UIMessage[] = [
       makeUserMessage("research solar panels"),
       makeAssistantMessage([makeToolPart("tavily_search")]),
+    ];
+
+    const result = evaluateToolCallRequirementForUIMessages(
+      TOOL_NAMES.extract_page_content,
+      messages,
+    );
+    expect(result).toBeNull();
+  });
+
+  it("returns null when extract_page_content called after hacker_news_search", () => {
+    const messages: UIMessage[] = [
+      makeUserMessage("research launch reactions"),
+      makeAssistantMessage([makeToolPart("hacker_news_search")]),
     ];
 
     const result = evaluateToolCallRequirementForUIMessages(

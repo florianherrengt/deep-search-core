@@ -1,4 +1,4 @@
-import { K as validateUrl, z as loadPageHtml, U as UrlValidationError } from "./youtube-B2M5GRew.js";
+import { V as validateUrl, F as loadPageHtml, U as UrlValidationError } from "./hacker-news-CcmUI8pw.js";
 import { load } from "cheerio";
 const MIN_CONTENT_LENGTH = 200;
 const STRUCTURAL_PRUNE_TAGS = [
@@ -363,4 +363,4 @@ export {
   extractPage as e,
   sanitizeHtml as s
 };
-//# sourceMappingURL=extract-page-CQXEvqNy.js.map
+//# sourceMappingURL=extract-page-Df-9mRr4.js.map

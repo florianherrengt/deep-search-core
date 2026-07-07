@@ -8,6 +8,7 @@ export type ConfiguredSearchProviderId =
   | "tavily"
   | "searxng"
   | "youtube"
+  | "hackernews"
   | "aggregate";
 
 export function normalizeSearchKeys(keys: SearchKeys | undefined): SearchKeys {
@@ -18,6 +19,7 @@ export function normalizeSearchKeys(keys: SearchKeys | undefined): SearchKeys {
     tavilyApiKey: trimOptional(keys?.tavilyApiKey),
     searxngBaseUrl: trimOptional(keys?.searxngBaseUrl),
     youtubeApiKey: trimOptional(keys?.youtubeApiKey),
+    hackerNews: keys?.hackerNews === true,
   };
 }
 
@@ -50,6 +52,7 @@ export function getConfiguredSearchProviderIds(
     providers.push("searxng");
   }
   if (normalized.youtubeApiKey) providers.push("youtube");
+  if (normalized.hackerNews) providers.push("hackernews");
   if (options.includeAggregate !== false && hasAggregatableSearchProviders(normalized)) {
     providers.push("aggregate");
   }

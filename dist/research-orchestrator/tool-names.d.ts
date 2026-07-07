@@ -7,6 +7,7 @@ export declare const TOOL_NAMES: {
     readonly tavily_search: "tavily_search";
     readonly searxng_search: "searxng_search";
     readonly youtube_search: "youtube_search";
+    readonly hacker_news_search: "hacker_news_search";
     readonly aggregate_search: "aggregate_search";
     readonly extract_page_content: "extract_page_content";
     readonly research_checkpoint: "research_checkpoint";

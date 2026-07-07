@@ -1,4 +1,4 @@
-import { K as validateUrl } from "./youtube-B2M5GRew.js";
+import { V as validateUrl } from "./hacker-news-CcmUI8pw.js";
 const extractors = [];
 const SCRAPE_DO_API_URL = "https://api.scrape.do/";
 async function fetchScrapeDoHtml(url, config, options) {
@@ -52,4 +52,4 @@ export {
   extractors as e,
   fetchScrapeDoHtml as f
 };
-//# sourceMappingURL=scrape-do-SqHoUZo0.js.map
+//# sourceMappingURL=scrape-do-BGF0LcQR.js.map

@@ -44,6 +44,7 @@ export { createSerperSearch } from "./search/serper.js";
 export { createTavilySearch } from "./search/tavily.js";
 export { createSearXNGFetchSearch } from "./search/searxng.js";
 export { createYouTubeSearch } from "./search/youtube.js";
+export { createHackerNewsSearch } from "./search/hacker-news.js";
 
 export type { BraveConfig, BraveSearchFn } from "./search/brave.js";
 export type { ExaConfig, ExaSearchFn } from "./search/exa.js";
@@ -51,6 +52,10 @@ export type { SerperConfig, SerperSearchFn } from "./search/serper.js";
 export type { TavilyConfig, TavilySearchFn } from "./search/tavily.js";
 export type { SearXNGConfig, SearXNGFetchSearchFn } from "./search/searxng.js";
 export type { YouTubeConfig, YouTubeSearchFn } from "./search/youtube.js";
+export type {
+  HackerNewsConfig,
+  HackerNewsSearchFn,
+} from "./search/hacker-news.js";
 export {
   downloadYouTubeSubtitles,
   extractYouTubeVideoId,
@@ -110,6 +115,20 @@ export type {
   YouTubeSubtitleDownloader,
   YouTubeSubtitleDownloadInput,
 } from "./extract/extractors/youtube.js";
+
+export {
+  HackerNewsExtractor,
+  extractHackerNewsItemId,
+  formatHackerNewsThread,
+  hackerNewsHtmlToMarkdown,
+  isHackerNewsItemUrl,
+} from "./extract/extractors/hacker-news.js";
+export type {
+  HackerNewsExtractorConfig,
+  HackerNewsItem,
+  ParsedHackerNewsComment,
+  ParsedHackerNewsThread,
+} from "./extract/extractors/hacker-news.js";
 
 export { extractPage } from "./extract/extract-page.js";
 export type { ExtractPageDeps } from "./extract/extract-page.js";

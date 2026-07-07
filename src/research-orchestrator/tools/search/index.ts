@@ -5,6 +5,7 @@ import { createSerperSearchTool } from "./serper";
 import { createTavilySearchTool } from "./tavily";
 import { createSearXNGSearchTool } from "./searxng";
 import { createYouTubeSearchTool } from "./youtube";
+import { createHackerNewsSearchTool } from "./hacker-news";
 import { createAggregateSearchTool } from "./aggregate";
 import {
   hasAggregatableSearchProviders,
@@ -36,6 +37,9 @@ export function createSearchTools(
   }
   if (keys.youtubeApiKey) {
     tools.youtube_search = createYouTubeSearchTool(keys.youtubeApiKey, fetchFn);
+  }
+  if (keys.hackerNews) {
+    tools.hacker_news_search = createHackerNewsSearchTool(fetchFn);
   }
   // The aggregate tool fans out to every configured provider above, so only
   // register it when at least one is available.

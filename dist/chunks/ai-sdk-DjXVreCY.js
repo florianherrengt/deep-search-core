@@ -1,5 +1,5 @@
 import { load } from "cheerio";
-import { P as PageExtractor, K as validateUrl, U as UrlValidationError, q as formatSearchResults, H as searchQueryInputSchema } from "./youtube-B2M5GRew.js";
+import { P as PageExtractor, V as validateUrl, U as UrlValidationError, t as formatSearchResults, N as searchQueryInputSchema } from "./hacker-news-CcmUI8pw.js";
 import { tool, zodSchema, streamText } from "ai";
 import { z } from "zod";
 const RESERVED_FIRST_SEGMENTS = /* @__PURE__ */ new Set([
@@ -575,4 +575,4 @@ export {
   isGithubNotFoundHtml as i,
   parseGithubRepoHtml as p
 };
-//# sourceMappingURL=ai-sdk-HwsLB3P_.js.map
+//# sourceMappingURL=ai-sdk-DjXVreCY.js.map

@@ -12,6 +12,7 @@ import {
   TrustpilotExtractor,
   GithubExtractor,
   YouTubeExtractor,
+  HackerNewsExtractor,
   type SearchExtractEngine,
   type PageLoader,
 } from "../../search-extract/index.js";
@@ -50,6 +51,7 @@ function getEngine(
         new TrustpilotExtractor(),
         new GithubExtractor(),
         new YouTubeExtractor(),
+        new HackerNewsExtractor(),
       ],
     });
     _engineFetch = fetchFn;

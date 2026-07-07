@@ -7,6 +7,7 @@ export const SEARCH_PROVIDER_NAMES = [
   "tavily",
   "searxng",
   "youtube",
+  "hackernews",
   "aggregate",
 ] as const;
 
