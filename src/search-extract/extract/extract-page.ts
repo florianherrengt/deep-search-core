@@ -99,7 +99,7 @@ async function genericExtract(
       return result;
     }
 
-    const renderOptions: PageRenderOptions = { signal };
+    const renderOptions: PageRenderOptions = { maxBytes: options?.maxBytes, signal };
     const html = await deps.pageLoader.renderHtml(url, renderOptions);
     const content = html ? sanitizeHtml(html) : "";
 
@@ -116,7 +116,7 @@ async function genericExtract(
 
   // fetch or auto: fetch first
   const fetchImpl = deps.fetch ?? globalThis.fetch;
-  const loadOptions: PageLoadOptions = { signal };
+  const loadOptions: PageLoadOptions = { maxBytes: options?.maxBytes, signal };
   const html = deps.pageLoader?.fetchHtml
     ? await deps.pageLoader.fetchHtml(url, loadOptions)
     : await loadPageHtml(url, fetchImpl, loadOptions);
@@ -126,7 +126,7 @@ async function genericExtract(
   // auto: fall back to render if content is too short
   if (method === "auto" && content.length < MIN_CONTENT_LENGTH) {
     if (deps.pageLoader?.renderHtml) {
-      const renderOptions: PageRenderOptions = { signal };
+      const renderOptions: PageRenderOptions = { maxBytes: options?.maxBytes, signal };
       const renderHtmlResult = await deps.pageLoader.renderHtml(url, renderOptions);
       const renderContent = renderHtmlResult ? sanitizeHtml(renderHtmlResult) : "";
 

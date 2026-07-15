@@ -29,6 +29,12 @@ describe("validateUrl", () => {
     expect(() => validateUrl("https://[::1]/page")).toThrow(UrlValidationError);
   });
 
+  it("throws for URLs containing credentials", () => {
+    expect(() => validateUrl("https://user:password@example.com/page")).toThrow(
+      UrlValidationError,
+    );
+  });
+
   it("throws for .local and .localhost domains", () => {
     expect(() => validateUrl("https://myservice.local/page")).toThrow(UrlValidationError);
     expect(() => validateUrl("https://myapp.localhost/page")).toThrow(UrlValidationError);
@@ -82,8 +88,89 @@ describe("loadPageHtml", () => {
 
     expect(result).toContain("Hello");
     expect(fetch).toHaveBeenCalledWith("https://example.com/page", {
+      redirect: "manual",
       signal: undefined,
     });
+  });
+
+  it("rejects a followed response whose final URL is private", async () => {
+    const response = {
+      ok: true,
+      url: "https://127.0.0.1/private",
+      headers: new Headers({ "content-type": "text/html" }),
+      text: () => Promise.resolve("<html>private</html>"),
+    };
+    const fetch = vi.fn().mockResolvedValue(response);
+
+    await expect(
+      loadPageHtml("https://public.example/redirect", fetch),
+    ).rejects.toThrow(UrlValidationError);
+  });
+
+  it("validates redirect targets before following them", async () => {
+    const fetch = vi.fn().mockResolvedValue(
+      new Response(null, {
+        status: 302,
+        headers: { location: "https://127.0.0.1/private" },
+      }),
+    );
+
+    await expect(
+      loadPageHtml("https://public.example/redirect", fetch),
+    ).rejects.toThrow(UrlValidationError);
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it("follows a bounded public redirect manually", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { location: "/final" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response("<html>redirected</html>", {
+          headers: { "content-type": "text/html" },
+        }),
+      );
+
+    await expect(
+      loadPageHtml("https://example.com/start", fetch),
+    ).resolves.toContain("redirected");
+    expect(fetch).toHaveBeenNthCalledWith(2, "https://example.com/final", {
+      redirect: "manual",
+      signal: undefined,
+    });
+  });
+
+  it("rejects responses larger than the configured byte limit", async () => {
+    const fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      url: "https://example.com/large",
+      headers: new Headers({
+        "content-type": "text/html",
+        "content-length": "1024",
+      }),
+      text: () => Promise.resolve("x".repeat(1024)),
+    });
+
+    await expect(
+      loadPageHtml("https://example.com/large", fetch, { maxBytes: 128 }),
+    ).resolves.toBeNull();
+  });
+
+  it("stops reading a streamed response after the configured byte limit", async () => {
+    const fetch = vi.fn().mockResolvedValue(
+      new Response("x".repeat(1024), {
+        headers: { "content-type": "text/html" },
+      }),
+    );
+
+    await expect(
+      loadPageHtml("https://example.com/stream", fetch, { maxBytes: 128 }),
+    ).resolves.toBeNull();
   });
 
   it("returns null for non-OK responses", async () => {
@@ -157,6 +244,7 @@ describe("loadPageHtml", () => {
     });
 
     expect(fetch).toHaveBeenCalledWith("https://example.com/page", {
+      redirect: "manual",
       signal: controller.signal,
     });
   });

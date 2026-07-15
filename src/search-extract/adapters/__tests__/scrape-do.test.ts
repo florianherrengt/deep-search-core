@@ -7,10 +7,9 @@ import { UrlValidationError } from "../../core/errors";
 
 describe("fetchScrapeDoHtml", () => {
   it("requests Scrape.do with token and target URL", async () => {
-    const fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve("<html><body>Rendered</body></html>"),
-    });
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(new Response("<html><body>Rendered</body></html>"));
 
     const result = await fetchScrapeDoHtml(
       "https://example.com/page?q=1",
@@ -95,10 +94,9 @@ describe("fetchScrapeDoHtml", () => {
 
 describe("createScrapeDoPageLoader", () => {
   it("exposes Scrape.do as a renderHtml loader", async () => {
-    const fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve("<html><body>Rendered</body></html>"),
-    });
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(new Response("<html><body>Rendered</body></html>"));
 
     const loader = createScrapeDoPageLoader({
       apiKey: "test-token",
@@ -108,5 +106,20 @@ describe("createScrapeDoPageLoader", () => {
     await expect(loader.renderHtml?.("https://example.com/page", {})).resolves.toContain(
       "Rendered",
     );
+  });
+
+  it("enforces the render response byte limit", async () => {
+    const loader = createScrapeDoPageLoader({
+      apiKey: "test-token",
+      fetch: vi.fn().mockResolvedValue(
+        new Response("x".repeat(1024), {
+          headers: { "content-type": "text/html" },
+        }),
+      ),
+    });
+
+    await expect(
+      loader.renderHtml?.("https://example.com/page", { maxBytes: 128 }),
+    ).resolves.toBeNull();
   });
 });

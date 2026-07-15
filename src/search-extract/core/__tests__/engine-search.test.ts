@@ -514,6 +514,38 @@ describe("engine aggregate provider", () => {
     expect(results[0]!.url).toBe("https://ok.example");
   });
 
+  it("returns provider diagnostics with partial aggregate results", async () => {
+    const mockFetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes("brave.com")) {
+        return Promise.resolve(
+          makeResponse(200, {
+            web: {
+              results: [
+                { title: "OK", url: "https://ok.example", description: "d" },
+              ],
+            },
+          }),
+        );
+      }
+      return Promise.resolve(makeResponse(500, { error: "boom" }));
+    });
+    const engine = createSearchExtractEngine({
+      fetch: mockFetch as unknown as typeof globalThis.fetch,
+      searchProviders: {
+        brave: { apiKey: "key-brave" },
+        tavily: { apiKey: "key-tavily" },
+      },
+    });
+
+    const aggregate = await engine.searchAggregate("q");
+
+    expect(aggregate.results).toHaveLength(1);
+    expect(aggregate.diagnostics).toEqual([
+      { provider: "brave", status: "fulfilled", resultCount: 1 },
+      expect.objectContaining({ provider: "tavily", status: "rejected" }),
+    ]);
+  });
+
   it("propagates AbortSignal to underlying provider calls", async () => {
     const controller = new AbortController();
     const mockFetch = vi.fn().mockImplementation(

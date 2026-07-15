@@ -1,5 +1,9 @@
 import type { PageLoader, PageRenderOptions } from "../core/types.js";
-import { validateUrl } from "../extract/page-loader.js";
+import {
+  DEFAULT_MAX_PAGE_BYTES,
+  readResponseText,
+  validateUrl,
+} from "../extract/page-loader.js";
 
 export const SCRAPE_DO_API_URL = "https://api.scrape.do/";
 
@@ -35,7 +39,11 @@ export async function fetchScrapeDoHtml(
 
     if (!response.ok) return null;
 
-    const html = await response.text();
+    const html = await readResponseText(
+      response,
+      options?.maxBytes ?? DEFAULT_MAX_PAGE_BYTES,
+    );
+    if (!html) return null;
     return html.trim() ? html : null;
   } catch (error) {
     if (isAbortError(error)) throw error;

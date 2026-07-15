@@ -1,9 +1,10 @@
-import { A, a, H, P, R, S, b, c, d, e, T, U, Y, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, B, C, D, E, F, G, I, J, K, L, M, N, O, Q, V } from "../chunks/hacker-news-CcmUI8pw.js";
-import { M as M2, e as e2, a as a2, s as s2 } from "../chunks/extract-page-Df-9mRr4.js";
-import { S as S2, c as c2, e as e3, f as f2 } from "../chunks/scrape-do-BGF0LcQR.js";
+import { A, a, D, H, P, R, S, b, c, d, e, T, U, Y, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, B, C, E, F, G, I, J, K, L, M, N, O, Q, V, W, X, Z } from "../chunks/hacker-news-CZDyDqkb.js";
+import { M as M2, e as e2, a as a2, s as s2 } from "../chunks/extract-page-qax63-yh.js";
+import { S as S2, c as c2, e as e3, f as f2 } from "../chunks/scrape-do-CaFVOWF6.js";
 export {
   A as AggregateSearchError,
   a as AmazonExtractor,
+  D as DEFAULT_MAX_PAGE_BYTES,
   H as HackerNewsExtractor,
   M2 as MIN_CONTENT_LENGTH,
   P as PageExtractor,
@@ -45,19 +46,21 @@ export {
   z as isRedditChallengeHtml,
   B as isTrustpilotChallengeHtml,
   C as isTrustpilotReviewPageUrl,
-  D as isTrustpilotUrl,
-  E as isYouTubeVideoUrl,
-  F as loadPageHtml,
-  G as parseAmazonProductHtml,
-  I as parseOldRedditHtml,
-  J as parseRedditJson,
-  K as parseTrustpilotCompanyHtml,
-  L as rateLimit,
-  M as resetRateLimiter,
+  E as isTrustpilotUrl,
+  F as isYouTubeVideoUrl,
+  G as loadPageHtml,
+  I as parseAmazonProductHtml,
+  J as parseOldRedditHtml,
+  K as parseRedditJson,
+  L as parseTrustpilotCompanyHtml,
+  M as rateLimit,
+  N as readResponseText,
+  O as resetRateLimiter,
   s2 as sanitizeHtml,
-  N as searchQueryInputSchema,
-  O as searchResultSchema,
-  Q as setRateLimiter,
-  V as validateUrl
+  Q as searchQueryInputSchema,
+  V as searchResultSchema,
+  W as setRateLimiter,
+  X as validatePublicIpAddress,
+  Z as validateUrl
 };
 //# sourceMappingURL=core-api.js.map

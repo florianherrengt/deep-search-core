@@ -35,6 +35,7 @@ function makeMockEngine(overrides: {
       method: "fetch" as const,
     }),
     searchAll: vi.fn().mockResolvedValue([]),
+    searchAggregate: vi.fn().mockResolvedValue({ results: [], diagnostics: [] }),
   };
 }
 

@@ -118,11 +118,11 @@ function createSearchProvider(options) {
   };
 }
 async function formatSearchHttpError(providerName, response) {
-  const body = await readResponseText(response);
+  const body = await readResponseText$1(response);
   const statusText = response.statusText ? ` ${response.statusText}` : "";
   return `${providerName} search failed with HTTP ${response.status}${statusText}${body ? `: ${body}` : ""}`;
 }
-async function readResponseText(response) {
+async function readResponseText$1(response) {
   try {
     const text = await response.text();
     return truncateForError(text.trim());
@@ -704,45 +704,54 @@ function getSearchFn(config, provider) {
   }
 }
 function createAggregateSearchFn(config) {
-  const perEngineFns = [];
+  return async (query, signal) => {
+    const result = await searchAggregate(config, query, signal);
+    return result.results;
+  };
+}
+async function searchAggregate(config, query, signal) {
+  const providers = [];
   for (const name of AGGREGATABLE_PROVIDER_NAMES) {
     try {
-      perEngineFns.push(getSearchFn(config, name));
+      providers.push({ name, search: getSearchFn(config, name) });
     } catch {
     }
   }
-  return async (query, signal) => {
-    if (perEngineFns.length === 0) {
-      throw new SearchProviderConfigError(
-        "Aggregate",
-        "requires at least one underlying search provider to be configured"
-      );
-    }
-    const settled = await Promise.allSettled(
-      perEngineFns.map(
-        (fn) => rateLimit(() => fn(query, signal), signal)
-      )
+  if (providers.length === 0) {
+    throw new SearchProviderConfigError(
+      "Aggregate",
+      "requires at least one underlying search provider to be configured"
     );
-    if (signal?.aborted) {
-      throw new DOMException("The operation was aborted.", "AbortError");
+  }
+  const settled = await Promise.allSettled(
+    providers.map(
+      ({ search }) => rateLimit(() => search(query, signal), signal)
+    )
+  );
+  if (signal?.aborted) {
+    throw new DOMException("The operation was aborted.", "AbortError");
+  }
+  const engineResults = [];
+  const errors = [];
+  const diagnostics = settled.map((result, index) => {
+    const provider = providers[index].name;
+    if (result.status === "fulfilled") {
+      engineResults.push(result.value);
+      return { provider, status: "fulfilled", resultCount: result.value.length };
     }
-    const engineResults = [];
-    const errors = [];
-    for (const result of settled) {
-      if (result.status === "fulfilled") {
-        engineResults.push(result.value);
-      } else {
-        errors.push(result.reason);
-      }
-    }
-    if (engineResults.length === 0 && errors.length > 0) {
-      throw new AggregateSearchError(
-        errors,
-        `Aggregate search failed: all underlying providers failed for query "${query}"`
-      );
-    }
-    const merged = mergeResults(engineResults, DEFAULT_AGGREGATE_NUM_RESULTS);
-    return merged;
+    const error = result.reason instanceof Error ? result.reason : new Error(String(result.reason));
+    errors.push(error);
+    return { provider, status: "rejected", error };
+  });
+  if (engineResults.length === 0 && errors.length > 0) {
+    throw new AggregateSearchError(
+      errors,
+      `Aggregate search failed: all underlying providers failed for query "${query}"`
+    );
+  }
+  return {
+    results: mergeResults(engineResults, DEFAULT_AGGREGATE_NUM_RESULTS),
+    diagnostics
   };
 }
 function getExtractDeps(config) {
@@ -799,8 +808,11 @@ function createSearchExtractEngine(config) {
       }
       return merged;
     },
+    async searchAggregate(query, options) {
+      return searchAggregate(config, query, options?.signal);
+    },
     async extract(url, options) {
-      const { extractPage } = await import("./extract-page-Df-9mRr4.js").then((n) => n.b);
+      const { extractPage } = await import("./extract-page-qax63-yh.js").then((n) => n.b);
       return extractPage(url, options, getExtractDeps(config));
     }
   };
@@ -1095,21 +1107,29 @@ const PRIVATE_HOSTNAMES = /* @__PURE__ */ new Set([
   "[::1]",
   "::1"
 ]);
-function isPrivateIp(hostname) {
+const DEFAULT_MAX_PAGE_BYTES = 2e6;
+const DEFAULT_MAX_REDIRECTS = 5;
+const REDIRECT_STATUSES = /* @__PURE__ */ new Set([301, 302, 303, 307, 308]);
+function parseIpAddress(hostname) {
   const bare = hostname.replace(/^\[|\]$/g, "");
-  let addr;
   try {
-    addr = ipaddr.parse(bare);
+    const address = ipaddr.parse(bare);
+    return address.kind() === "ipv6" && address.isIPv4MappedAddress() ? address.toIPv4Address() : address;
   } catch {
-    return false;
+    return null;
   }
-  if (addr.kind() === "ipv6") {
-    const v6 = addr;
-    if (v6.isIPv4MappedAddress()) {
-      addr = v6.toIPv4Address();
-    }
+}
+function isPrivateIp(hostname) {
+  const address = parseIpAddress(hostname);
+  return address ? address.range() !== "unicast" : false;
+}
+function validatePublicIpAddress(address) {
+  const parsedAddress = parseIpAddress(address);
+  if (!parsedAddress || parsedAddress.range() !== "unicast") {
+    throw new UrlValidationError(
+      `Private/special-use IP address not allowed: ${address}`
+    );
   }
-  return addr.range() !== "unicast";
 }
 function validateUrl(raw) {
   const trimmed = raw.trim();
@@ -1131,6 +1151,9 @@ function validateUrl(raw) {
       `Only https URLs are allowed, got: ${parsed.protocol}`
     );
   }
+  if (parsed.username || parsed.password) {
+    throw new UrlValidationError("URL credentials are not allowed");
+  }
   const hostname = parsed.hostname.toLowerCase();
   if (PRIVATE_HOSTNAMES.has(hostname)) {
     throw new UrlValidationError(
@@ -1147,25 +1170,109 @@ function validateUrl(raw) {
   }
   return parsed;
 }
+function contentLengthExceedsLimit(response, maxBytes) {
+  const contentLength = Number(response.headers.get("content-length"));
+  return Number.isFinite(contentLength) && contentLength > maxBytes;
+}
+async function readStreamWithLimit({
+  bytesRead,
+  decoder,
+  maxBytes,
+  reader,
+  text
+}) {
+  const chunk = await reader.read();
+  if (chunk.done) {
+    return text + decoder.decode();
+  }
+  const nextByteCount = bytesRead + chunk.value.byteLength;
+  if (nextByteCount > maxBytes) {
+    await reader.cancel();
+    return null;
+  }
+  return readStreamWithLimit({
+    bytesRead: nextByteCount,
+    decoder,
+    maxBytes,
+    reader,
+    text: text + decoder.decode(chunk.value, { stream: true })
+  });
+}
+async function readResponseText(response, maxBytes = DEFAULT_MAX_PAGE_BYTES) {
+  if (contentLengthExceedsLimit(response, maxBytes)) {
+    await response.body?.cancel();
+    return null;
+  }
+  if (!response.body) {
+    const text = await response.text();
+    return new TextEncoder().encode(text).byteLength <= maxBytes ? text : null;
+  }
+  return readStreamWithLimit({
+    bytesRead: 0,
+    decoder: new TextDecoder(),
+    maxBytes,
+    reader: response.body.getReader(),
+    text: ""
+  });
+}
+async function fetchValidatedResponse({
+  fetchImpl,
+  maxRedirects,
+  redirectsFollowed,
+  signal,
+  url
+}) {
+  const parsedUrl = validateUrl(url);
+  const response = await fetchImpl(parsedUrl.href, {
+    redirect: "manual",
+    signal
+  });
+  if (response.url) {
+    validateUrl(response.url);
+  }
+  if (!REDIRECT_STATUSES.has(response.status)) {
+    return response;
+  }
+  const location = response.headers.get("location");
+  if (!location || redirectsFollowed >= maxRedirects) {
+    return null;
+  }
+  const redirectUrl = new URL(location, parsedUrl);
+  validateUrl(redirectUrl.href);
+  return fetchValidatedResponse({
+    fetchImpl,
+    maxRedirects,
+    redirectsFollowed: redirectsFollowed + 1,
+    signal,
+    url: redirectUrl.href
+  });
+}
 async function loadPageHtml(url, fetchImpl, options) {
   validateUrl(url);
   if (options?.signal?.aborted) {
     throw createAbortError();
   }
   try {
-    const response = await fetchImpl(url, {
-      signal: options?.signal
+    const response = await fetchValidatedResponse({
+      fetchImpl,
+      maxRedirects: options?.maxRedirects ?? DEFAULT_MAX_REDIRECTS,
+      redirectsFollowed: 0,
+      signal: options?.signal,
+      url
     });
-    if (!response.ok) {
+    if (!response?.ok) {
       return null;
     }
     const contentType = response.headers.get("content-type") ?? "";
     if (!contentType.includes("text/html") && !contentType.includes("application/xhtml") && !contentType.includes("text/plain")) {
       return null;
     }
-    return await response.text();
+    return await readResponseText(
+      response,
+      options?.maxBytes ?? DEFAULT_MAX_PAGE_BYTES
+    );
   } catch (error) {
-    if (isAbortError$1(error)) {
+    if (isAbortError$1(error) || error instanceof UrlValidationError) {
       throw error;
     }
     return null;
@@ -2832,34 +2939,37 @@ function normalizeMaxDepth(maxDepth) {
   );
 }
 export {
+  DEFAULT_AGGREGATE_NUM_RESULTS as $,
   AggregateSearchError as A,
   isTrustpilotChallengeHtml as B,
   isTrustpilotReviewPageUrl as C,
-  isTrustpilotUrl as D,
-  isYouTubeVideoUrl as E,
-  loadPageHtml as F,
-  parseAmazonProductHtml as G,
+  DEFAULT_MAX_PAGE_BYTES as D,
+  isTrustpilotUrl as E,
+  isYouTubeVideoUrl as F,
+  loadPageHtml as G,
   HackerNewsExtractor as H,
-  parseOldRedditHtml as I,
-  parseRedditJson as J,
-  parseTrustpilotCompanyHtml as K,
-  rateLimit as L,
-  resetRateLimiter as M,
-  searchQueryInputSchema as N,
-  searchResultSchema as O,
+  parseAmazonProductHtml as I,
+  parseOldRedditHtml as J,
+  parseRedditJson as K,
+  parseTrustpilotCompanyHtml as L,
+  rateLimit as M,
+  readResponseText as N,
+  resetRateLimiter as O,
   PageExtractor as P,
-  setRateLimiter as Q,
+  searchQueryInputSchema as Q,
   RedditExtractor as R,
   SEARCH_PROVIDER_NAMES as S,
   TrustpilotExtractor as T,
   UrlValidationError as U,
-  validateUrl as V,
-  AGGREGATABLE_PROVIDER_NAMES as W,
-  DEFAULT_AGGREGATE_NUM_RESULTS as X,
+  searchResultSchema as V,
+  setRateLimiter as W,
+  validatePublicIpAddress as X,
   YouTubeExtractor as Y,
-  mergeResults as Z,
-  normalizeUrl as _,
+  validateUrl as Z,
+  AGGREGATABLE_PROVIDER_NAMES as _,
   AmazonExtractor as a,
+  mergeResults as a0,
+  normalizeUrl as a1,
   SearchProviderConfigError as b,
   SearchProviderError as c,
   SearchProviderResponseError as d,
@@ -2886,4 +2996,4 @@ export {
   isHackerNewsItemUrl as y,
   isRedditChallengeHtml as z
 };
-//# sourceMappingURL=hacker-news-CcmUI8pw.js.map
+//# sourceMappingURL=hacker-news-CZDyDqkb.js.map

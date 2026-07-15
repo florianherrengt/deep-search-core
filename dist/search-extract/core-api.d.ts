@@ -4,7 +4,7 @@ export { SearchProviderConfigError, SearchProviderError, SearchProviderResponseE
 export { rateLimit, setRateLimiter, resetRateLimiter, getRateLimiter, } from "./core/rate-limit.js";
 export type { RateLimiter } from "./core/rate-limit.js";
 export { createSearchExtractEngine } from "./core/engine.js";
-export type { SearchExtractEngine, CreateEngineConfig } from "./core/engine.js";
+export type { SearchExtractEngine, CreateEngineConfig, AggregateSearchResult, AggregateSearchProviderDiagnostic, } from "./core/engine.js";
 export { createSearchProvider, formatSearchHttpError } from "./search/create-search-provider.js";
 export { formatSearchResults } from "./search/format.js";
 export { createBraveSearch } from "./search/brave.js";
@@ -24,7 +24,7 @@ export type { HackerNewsConfig, HackerNewsSearchFn, } from "./search/hacker-news
 export { downloadYouTubeSubtitles, extractYouTubeVideoId, } from "./youtube-subtitles.js";
 export type { DownloadYouTubeSubtitlesConfig, YouTubeSubtitleCue, YouTubeSubtitleTrack, YouTubeSubtitlesResult, } from "./youtube-subtitles.js";
 export { sanitizeHtml, extractVisibleTextFromHtml, MIN_CONTENT_LENGTH } from "./extract/sanitize-html.js";
-export { loadPageHtml, validateUrl } from "./extract/page-loader.js";
+export { DEFAULT_MAX_PAGE_BYTES, loadPageHtml, readResponseText, validatePublicIpAddress, validateUrl, } from "./extract/page-loader.js";
 export { PageExtractor } from "./extract/extractors/base.js";
 export type { ExtractorInput, ExtractorResult } from "./extract/extractors/base.js";
 export { extractors } from "./extract/extractors/registry.js";

@@ -1,5 +1,7 @@
 import {
   AGGREGATABLE_PROVIDER_NAMES,
+  type AggregatableProviderName,
+  type MergedResult,
   type SearchProviderName,
   type SearchResult,
   type SearchAllOptions,
@@ -60,10 +62,31 @@ export interface SearchExtractEngine {
     query: string,
     options?: SearchAllOptions,
   ): Promise<SearchResult[]>;
+  searchAggregate(
+    query: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<AggregateSearchResult>;
   extract(
     url: string,
     options?: ExtractOptions,
   ): Promise<ExtractResult>;
+}
+
+export type AggregateSearchProviderDiagnostic =
+  | {
+      provider: AggregatableProviderName;
+      status: "fulfilled";
+      resultCount: number;
+    }
+  | {
+      provider: AggregatableProviderName;
+      status: "rejected";
+      error: Error;
+    };
+
+export interface AggregateSearchResult {
+  results: MergedResult[];
+  diagnostics: AggregateSearchProviderDiagnostic[];
 }
 
 function getSearchFn(
@@ -145,56 +168,76 @@ function getSearchFn(
  * invoke aggregation through the single-provider `search()` entry point.
  */
 function createAggregateSearchFn(config: CreateEngineConfig): SearchFn {
-  const perEngineFns: SearchFn[] = [];
+  return async (query: string, signal?: AbortSignal): Promise<SearchResult[]> => {
+    const result = await searchAggregate(config, query, signal);
+    return result.results;
+  };
+}
+
+async function searchAggregate(
+  config: CreateEngineConfig,
+  query: string,
+  signal?: AbortSignal,
+): Promise<AggregateSearchResult> {
+  const providers: Array<{
+    name: AggregatableProviderName;
+    search: SearchFn;
+  }> = [];
   for (const name of AGGREGATABLE_PROVIDER_NAMES) {
     try {
-      perEngineFns.push(getSearchFn(config, name));
+      providers.push({ name, search: getSearchFn(config, name) });
     } catch {
       // Skip unconfigured providers.
     }
   }
 
-  return async (query: string, signal?: AbortSignal): Promise<SearchResult[]> => {
-    if (perEngineFns.length === 0) {
-      throw new SearchProviderConfigError(
-        "Aggregate",
-        "requires at least one underlying search provider to be configured",
-      );
-    }
-
-    const settled = await Promise.allSettled(
-      perEngineFns.map((fn) =>
-        rateLimit(() => fn(query, signal), signal),
-      ),
+  if (providers.length === 0) {
+    throw new SearchProviderConfigError(
+      "Aggregate",
+      "requires at least one underlying search provider to be configured",
     );
+  }
 
-    // If the caller aborted, propagate that directly rather than wrapping it
-    // in an AggregateSearchError — aborts are intentional cancellations, not
-    // provider failures, and downstream handlers key off the AbortError name.
-    if (signal?.aborted) {
-      throw new DOMException("The operation was aborted.", "AbortError");
+  const settled = await Promise.allSettled(
+    providers.map(({ search }) =>
+      rateLimit(() => search(query, signal), signal),
+    ),
+  );
+
+  // If the caller aborted, propagate that directly rather than wrapping it
+  // in an AggregateSearchError — aborts are intentional cancellations, not
+  // provider failures, and downstream handlers key off the AbortError name.
+  if (signal?.aborted) {
+    throw new DOMException("The operation was aborted.", "AbortError");
+  }
+
+  const engineResults: SearchResult[][] = [];
+  const errors: Error[] = [];
+  const diagnostics = settled.map((result, index): AggregateSearchProviderDiagnostic => {
+    const provider = providers[index]!.name;
+
+    if (result.status === "fulfilled") {
+      engineResults.push(result.value);
+      return { provider, status: "fulfilled", resultCount: result.value.length };
     }
 
-    const engineResults: SearchResult[][] = [];
-    const errors: Error[] = [];
+    const error = result.reason instanceof Error
+      ? result.reason
+      : new Error(String(result.reason));
+    errors.push(error);
+    return { provider, status: "rejected", error };
+  });
 
-    for (const result of settled) {
-      if (result.status === "fulfilled") {
-        engineResults.push(result.value);
-      } else {
-        errors.push(result.reason as Error);
-      }
-    }
+  if (engineResults.length === 0 && errors.length > 0) {
+    throw new AggregateSearchError(
+      errors,
+      `Aggregate search failed: all underlying providers failed for query "${query}"`,
+    );
+  }
 
-    if (engineResults.length === 0 && errors.length > 0) {
-      throw new AggregateSearchError(
-        errors,
-        `Aggregate search failed: all underlying providers failed for query "${query}"`,
-      );
-    }
-
-    const merged = mergeResults(engineResults, DEFAULT_AGGREGATE_NUM_RESULTS);
-    return merged;
+  return {
+    results: mergeResults(engineResults, DEFAULT_AGGREGATE_NUM_RESULTS),
+    diagnostics,
   };
 }
 
@@ -284,6 +327,13 @@ export function createSearchExtractEngine(
       }
 
       return merged;
+    },
+
+    async searchAggregate(
+      query: string,
+      options?: { signal?: AbortSignal },
+    ): Promise<AggregateSearchResult> {
+      return searchAggregate(config, query, options?.signal);
     },
 
     async extract(

@@ -1,4 +1,4 @@
-import { V as validateUrl, F as loadPageHtml, U as UrlValidationError } from "./hacker-news-CcmUI8pw.js";
+import { Z as validateUrl, G as loadPageHtml, U as UrlValidationError } from "./hacker-news-CZDyDqkb.js";
 import { load } from "cheerio";
 const MIN_CONTENT_LENGTH = 200;
 const STRUCTURAL_PRUNE_TAGS = [
@@ -275,7 +275,7 @@ async function genericExtract(url, method, signal, deps, warnings, options) {
       };
       return result3;
     }
-    const renderOptions = { signal };
+    const renderOptions = { maxBytes: options?.maxBytes, signal };
     const html2 = await deps.pageLoader.renderHtml(url, renderOptions);
     const content2 = html2 ? sanitizeHtml(html2) : "";
     const result2 = {
@@ -289,12 +289,12 @@ async function genericExtract(url, method, signal, deps, warnings, options) {
     return applySummarization(result2, options, deps.summarizer);
   }
   const fetchImpl = deps.fetch ?? globalThis.fetch;
-  const loadOptions = { signal };
+  const loadOptions = { maxBytes: options?.maxBytes, signal };
   const html = deps.pageLoader?.fetchHtml ? await deps.pageLoader.fetchHtml(url, loadOptions) : await loadPageHtml(url, fetchImpl, loadOptions);
   const content = html ? sanitizeHtml(html) : "";
   if (method === "auto" && content.length < MIN_CONTENT_LENGTH) {
     if (deps.pageLoader?.renderHtml) {
-      const renderOptions = { signal };
+      const renderOptions = { maxBytes: options?.maxBytes, signal };
       const renderHtmlResult = await deps.pageLoader.renderHtml(url, renderOptions);
       const renderContent = renderHtmlResult ? sanitizeHtml(renderHtmlResult) : "";
       if (renderContent.length >= content.length || content.length === 0) {
@@ -363,4 +363,4 @@ export {
   extractPage as e,
   sanitizeHtml as s
 };
-//# sourceMappingURL=extract-page-Df-9mRr4.js.map
+//# sourceMappingURL=extract-page-qax63-yh.js.map

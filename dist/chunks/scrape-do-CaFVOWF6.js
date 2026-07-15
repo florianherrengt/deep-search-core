@@ -1,4 +1,4 @@
-import { V as validateUrl } from "./hacker-news-CcmUI8pw.js";
+import { Z as validateUrl, N as readResponseText, D as DEFAULT_MAX_PAGE_BYTES } from "./hacker-news-CZDyDqkb.js";
 const extractors = [];
 const SCRAPE_DO_API_URL = "https://api.scrape.do/";
 async function fetchScrapeDoHtml(url, config, options) {
@@ -15,7 +15,11 @@ async function fetchScrapeDoHtml(url, config, options) {
       signal: options?.signal
     });
     if (!response.ok) return null;
-    const html = await response.text();
+    const html = await readResponseText(
+      response,
+      options?.maxBytes ?? DEFAULT_MAX_PAGE_BYTES
+    );
+    if (!html) return null;
     return html.trim() ? html : null;
   } catch (error) {
     if (isAbortError(error)) throw error;
@@ -52,4 +56,4 @@ export {
   extractors as e,
   fetchScrapeDoHtml as f
 };
-//# sourceMappingURL=scrape-do-BGF0LcQR.js.map
+//# sourceMappingURL=scrape-do-CaFVOWF6.js.map

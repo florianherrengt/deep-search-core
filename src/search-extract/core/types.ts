@@ -67,11 +67,14 @@ export interface SearchAllOptions {
 export interface PageLoadOptions {
   signal?: AbortSignal;
   timeout?: number;
+  maxBytes?: number;
+  maxRedirects?: number;
 }
 
 export interface PageRenderOptions {
   signal?: AbortSignal;
   timeout?: number;
+  maxBytes?: number;
 }
 
 export interface PageLoader {
@@ -90,6 +93,7 @@ export interface ExtractOptions {
   summarize?: boolean;
   query?: string;
   signal?: AbortSignal;
+  maxBytes?: number;
 }
 
 export interface ExtractResult {
