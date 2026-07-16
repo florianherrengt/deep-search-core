@@ -43,4 +43,6 @@ export { extractPage } from "./extract/extract-page.js";
 export type { ExtractPageDeps } from "./extract/extract-page.js";
 export { SCRAPE_DO_API_URL, createScrapeDoPageLoader, fetchScrapeDoHtml, } from "./adapters/scrape-do.js";
 export type { ScrapeDoPageLoaderConfig } from "./adapters/scrape-do.js";
+export { SCRAPING_ANT_API_URL, createScrapingAntPageLoader, fetchScrapingAntHtml, } from "./adapters/scraping-ant.js";
+export type { ScrapingAntPageLoaderConfig } from "./adapters/scraping-ant.js";
 //# sourceMappingURL=core-api.d.ts.map

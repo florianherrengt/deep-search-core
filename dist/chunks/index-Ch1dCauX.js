@@ -1,6 +1,6 @@
 import { _ as AGGREGATABLE_PROVIDER_NAMES, A as AggregateSearchError, a as AmazonExtractor, $ as DEFAULT_AGGREGATE_NUM_RESULTS, D as DEFAULT_MAX_PAGE_BYTES, H as HackerNewsExtractor, P as PageExtractor, R as RedditExtractor, S as SEARCH_PROVIDER_NAMES, b as SearchProviderConfigError, c as SearchProviderError, d as SearchProviderResponseError, e as ShopifyExtractor, T as TrustpilotExtractor, U as UrlValidationError, Y as YouTubeExtractor, f as createBraveSearch, g as createExaSearch, h as createHackerNewsSearch, i as createSearXNGFetchSearch, j as createSearchExtractEngine, k as createSearchProvider, l as createSerperSearch, m as createTavilySearch, n as createYouTubeSearch, o as downloadYouTubeSubtitles, p as extractHackerNewsItemId, q as extractYouTubeVideoId, r as formatHackerNewsThread, s as formatSearchHttpError, t as formatSearchResults, u as formatYouTubeTranscript, v as getRateLimiter, w as hackerNewsHtmlToMarkdown, x as isAmazonChallengePage, y as isHackerNewsItemUrl, z as isRedditChallengeHtml, B as isTrustpilotChallengeHtml, C as isTrustpilotReviewPageUrl, E as isTrustpilotUrl, F as isYouTubeVideoUrl, G as loadPageHtml, a0 as mergeResults, a1 as normalizeUrl, I as parseAmazonProductHtml, J as parseOldRedditHtml, K as parseRedditJson, L as parseTrustpilotCompanyHtml, M as rateLimit, N as readResponseText, O as resetRateLimiter, Q as searchQueryInputSchema, V as searchResultSchema, W as setRateLimiter, X as validatePublicIpAddress, Z as validateUrl } from "./hacker-news-CZDyDqkb.js";
 import { M as MIN_CONTENT_LENGTH, e as extractPage, a as extractVisibleTextFromHtml, s as sanitizeHtml } from "./extract-page-qax63-yh.js";
-import { S as SCRAPE_DO_API_URL, c as createScrapeDoPageLoader, e as extractors, f as fetchScrapeDoHtml } from "./scrape-do-CaFVOWF6.js";
+import { S as SCRAPE_DO_API_URL, a as SCRAPING_ANT_API_URL, c as createScrapeDoPageLoader, b as createScrapingAntPageLoader, e as extractors, f as fetchScrapeDoHtml, d as fetchScrapingAntHtml } from "./scraping-ant-M1Rs5Tqe.js";
 import { G as GithubExtractor, c as createAiSdkExtractPageContentTool, a as createAiSdkSearchTool, b as createAiSdkSummarizer, i as isGithubNotFoundHtml, d as isGithubRepoOverviewUrl, p as parseGithubRepoHtml } from "./ai-sdk-CfWEILue.js";
 function createTauriPageLoader(callbacks) {
   return {
@@ -21,6 +21,7 @@ const index = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePropert
   PageExtractor,
   RedditExtractor,
   SCRAPE_DO_API_URL,
+  SCRAPING_ANT_API_URL,
   SEARCH_PROVIDER_NAMES,
   SearchProviderConfigError,
   SearchProviderError,
@@ -36,6 +37,7 @@ const index = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePropert
   createExaSearch,
   createHackerNewsSearch,
   createScrapeDoPageLoader,
+  createScrapingAntPageLoader,
   createSearXNGFetchSearch,
   createSearchExtractEngine,
   createSearchProvider,
@@ -50,6 +52,7 @@ const index = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePropert
   extractYouTubeVideoId,
   extractors,
   fetchScrapeDoHtml,
+  fetchScrapingAntHtml,
   formatHackerNewsThread,
   formatSearchHttpError,
   formatSearchResults,
@@ -87,4 +90,4 @@ export {
   createTauriPageLoader as c,
   index as i
 };
-//# sourceMappingURL=index-BVhZmKcQ.js.map
+//# sourceMappingURL=index-Ch1dCauX.js.map

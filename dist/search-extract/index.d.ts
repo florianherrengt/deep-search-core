@@ -49,4 +49,6 @@ export { createTauriPageLoader } from "./adapters/tauri.js";
 export type { TauriLoaderCallbacks } from "./adapters/tauri.js";
 export { SCRAPE_DO_API_URL, createScrapeDoPageLoader, fetchScrapeDoHtml, } from "./adapters/scrape-do.js";
 export type { ScrapeDoPageLoaderConfig } from "./adapters/scrape-do.js";
+export { SCRAPING_ANT_API_URL, createScrapingAntPageLoader, fetchScrapingAntHtml, } from "./adapters/scraping-ant.js";
+export type { ScrapingAntPageLoaderConfig } from "./adapters/scraping-ant.js";
 //# sourceMappingURL=index.d.ts.map
