@@ -2,6 +2,7 @@
   "name": "deep-search-core",
   "version": "0.1.0",
   "description": "Shared deep research orchestration, search, and extraction core.",
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

@@ -8,3 +8,7 @@ This package merges the previous `research-orchestrator` and `@deep-search/searc
 import { createGuardedStream } from "deep-search-core/research-orchestrator";
 import { createSearchExtractEngine } from "deep-search-core/search-extract";
 ```
+
+## License
+
+[MIT](./LICENSE) © 2026 Florian Herrengt
